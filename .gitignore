@@ -1,6 +1,8 @@
 .env
 node_modules
 
+stockVideo
+
 # Ignore video files
 *.mp4
 *.avi
