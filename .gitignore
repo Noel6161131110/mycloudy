@@ -1,2 +1,24 @@
 .env
 node_modules
+
+# Ignore video files
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.flv
+
+# Ignore image files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.svg
+
+# Ignore other common media formats
+*.mp3
+*.wav
+*.ogg
+*.flac
