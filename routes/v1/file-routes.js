@@ -25,5 +25,6 @@ const fileRouter = express.Router();
 // * Video Route
 fileRouter.post("/upload-file", upload.single('file') ,fileController.UploadFile)
 fileRouter.get("/stream-video", fileController.StreamVideo)
+fileRouter.get("/get-info/video", fileController.GetVideoInfo)
 
 export { fileRouter };

@@ -67,6 +67,27 @@ fileController.UploadFile = async (req, res) => {
   }
 };
 
+// * Function to get the info of a video
+fileController.GetVideoInfo = async (req, res) => {
+  const fileId = req.query.id;
+  if (!fileId) {
+    return res.status(400).send("Missing video ID query parameter");
+  }
+
+  const fileRepository = AppDataSource.getRepository(FileModel);
+  const videoFile = await fileRepository.findOne({ where: { id: fileId } });
+
+  if (!videoFile) {
+    return res.status(404).send("Video file not found");
+  }
+
+  return res.send({
+    filename: videoFile.filename,
+    totalLength: videoFile.totalLength || 'Not a video file',
+    currentTrackAt: videoFile.currentTrackAt || 0,
+  });
+};
+
 // * Function to stream video
 fileController.StreamVideo = async (req, res) => {
   const range = req.headers.range;
@@ -136,6 +157,7 @@ const saveCurrentTime = async (fileId, currentTime) => {
     await fileRepository.save(videoFile);
   }
 };
+
 
 
 // ? Export the fileController
