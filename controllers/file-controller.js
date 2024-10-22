@@ -136,16 +136,19 @@ fileController.StreamVideo = async (req, res) => {
   const videoStream = fs.createReadStream(videoPath, { start, end });
   videoStream.pipe(res);
 
-  const videoDuration = 100; 
-  let elapsedTime = (start / videoSize) * videoDuration + currentTrackAt;
+};
 
-  res.on('close', () => {
-    saveCurrentTime(fileId, elapsedTime);
-  });
+// * Function to save the current time of a video
+fileController.SaveCurrentTime = async (req, res) => {
+  const fileId = req.body.videoId;
+  const currentTime = req.body.currentTime;
 
-  res.on('finish', () => {
-    saveCurrentTime(fileId, elapsedTime);
-  });
+  if (!fileId || !currentTime) {
+    return res.status(400).send("Missing video ID or time query parameter");
+  }
+
+  await saveCurrentTime(fileId, currentTime);
+  return res.send("Current time saved successfully");
 };
 
 const saveCurrentTime = async (fileId, currentTime) => {
