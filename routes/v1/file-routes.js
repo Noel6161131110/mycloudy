@@ -22,8 +22,11 @@ limits: { fileSize: 1 * 1024 * 1024 * 1024 }, // Max file size: 1GB
 
 const fileRouter = express.Router();
 
-// * Video Route
+// * File Routes
 fileRouter.post("/upload-file", upload.single('file') ,fileController.UploadFile)
+fileRouter.get("/get-files", fileController.GetFiles)
+
+// * Vidoe Route
 fileRouter.get("/stream-video", fileController.StreamVideo)
 fileRouter.get("/get-info/video", fileController.GetVideoInfo)
 fileRouter.post("/save-video-time", fileController.SaveCurrentTime)

@@ -36,13 +36,26 @@ fileController.UploadFile = async (req, res) => {
     console.log('File details:', fullFilePath, fileExtension);
 
     let totalLength = null;
-
+    let Filetype;
     // Check if the file is a video by its extension
     const videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm'];
+    const audioExtensions = ['mp3', 'wav', 'ogg', 'flac'];
+    const imageExtensions = ['jpg', 'jpeg', 'png'];
+
     if (videoExtensions.includes(fileExtension.toLowerCase())) {
       // Use ffmpeg to get the video duration
       totalLength = await getVideoDuration(fullFilePath);
       console.log('Video duration:', totalLength);
+      Filetype = 'video';
+    }
+    else if (audioExtensions.includes(fileExtension.toLowerCase())) {
+      Filetype = 'audio';
+    }
+    else if (imageExtensions.includes(fileExtension.toLowerCase())) {
+      Filetype = 'images';
+    }
+    else {
+      return res.status(400).send('Invalid file type');
     }
 
     // Use the repository pattern to create and save the file details
@@ -51,8 +64,9 @@ fileController.UploadFile = async (req, res) => {
       filename,
       fileExtension,
       filePath: fullFilePath,
+      fileType: Filetype,
       totalLength, // Store the total length of the video if available
-    });
+    }); 
 
     await fileRepository.save(fileDetails); // Save to the database
 
@@ -65,6 +79,29 @@ fileController.UploadFile = async (req, res) => {
     console.error('Error saving file details:', error);
     return res.status(500).send('An error occurred while uploading the file.');
   }
+};
+
+// * Function to get files
+fileController.GetFiles = async (req, res) => {
+  const FileType = req.query.type;
+
+  if (!FileType) {
+    return res.status(400).send("Missing file type query parameter");
+  }
+
+  if (FileType !== 'video' && FileType !== 'audio' && FileType !== 'images') {
+    return res.status(400).send("Invalid file type query parameter");
+  }
+
+  const fileRepository = AppDataSource.getRepository(FileModel);
+
+
+  if (FileType === 'video' || FileType === 'audio' || FileType === 'images') {
+    const files = await fileRepository.find({ where: { fileType : FileType } });
+    return res.send({"file_result" : files});
+  }
+
+  return res.status(500).send("An error occurred while fetching files");
 };
 
 // * Function to get the info of a video

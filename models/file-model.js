@@ -18,6 +18,9 @@ export const FileModel = new EntitySchema({
     filePath: {
       type: 'varchar',
     },
+    fileType: {
+      type: 'varchar',
+    },
     totalLength: {
         type: 'float',
         nullable: true,
