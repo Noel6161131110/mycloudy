@@ -31,4 +31,10 @@ fileRouter.get("/stream-video", fileController.StreamVideo)
 fileRouter.get("/get-info/video", fileController.GetVideoInfo)
 fileRouter.post("/save-video-time", fileController.SaveCurrentTime)
 
+// * Image Route
+fileRouter.get("/show-image", fileController.ShowImage)
+
+// * Audio Route
+fileRouter.get("/stream-audio", fileController.StreamAudio)
+
 export { fileRouter };

@@ -30,6 +30,7 @@ fileController.UploadFile = async (req, res) => {
 
   try {
     const { filename, path: filePath } = req.file;
+    const title = req.body.title;
     const fileExtension = filename.split('.').pop();
     const fullFilePath = path.join(process.cwd(), filePath);
 
@@ -41,6 +42,10 @@ fileController.UploadFile = async (req, res) => {
     const videoExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm'];
     const audioExtensions = ['mp3', 'wav', 'ogg', 'flac'];
     const imageExtensions = ['jpg', 'jpeg', 'png'];
+
+    if (title === undefined) {
+      return res.status(400).send('Title is required');
+    }
 
     if (videoExtensions.includes(fileExtension.toLowerCase())) {
       // Use ffmpeg to get the video duration
@@ -61,6 +66,7 @@ fileController.UploadFile = async (req, res) => {
     // Use the repository pattern to create and save the file details
     const fileRepository = AppDataSource.getRepository('FileModel'); // Ensure 'FileModel' matches your entity
     const fileDetails = fileRepository.create({
+      title,
       filename,
       fileExtension,
       filePath: fullFilePath,
@@ -98,6 +104,7 @@ fileController.GetFiles = async (req, res) => {
 
   if (FileType === 'video' || FileType === 'audio' || FileType === 'images') {
     const files = await fileRepository.find({ where: { fileType : FileType } });
+
     return res.send({"file_result" : files});
   }
 
@@ -198,7 +205,43 @@ const saveCurrentTime = async (fileId, currentTime) => {
   }
 };
 
+// * Function to show the image
+fileController.ShowImage = async (req, res) => {
+  const fileId = req.query.id;
+  if (!fileId) {
+    return res.status(400).send("Missing image ID query parameter");
+  }
 
+  const fileRepository = AppDataSource.getRepository(FileModel);
+  const imageFile = await fileRepository.findOne({ where: { id: fileId } });
+
+  if (!imageFile) {
+    return res.status(404).send("Image file not found");
+  }
+
+  const imagePath = imageFile.filePath;
+  const imageStream = fs.createReadStream(imagePath);
+  imageStream.pipe(res);
+};
+
+// * Function to stream audio
+fileController.StreamAudio = async (req, res) => {
+  const fileId = req.query.id;
+  if (!fileId) {
+    return res.status(400).send("Missing audio ID query parameter");
+  }
+
+  const fileRepository = AppDataSource.getRepository(FileModel);
+  const audioFile = await fileRepository.findOne({ where: { id: fileId } });
+
+  if (!audioFile) {
+    return res.status(404).send("Audio file not found");
+  }
+
+  const audioPath = audioFile.filePath;
+  const audioStream = fs.createReadStream(audioPath);
+  audioStream.pipe(res);
+};
 
 // ? Export the fileController
 export { fileController };

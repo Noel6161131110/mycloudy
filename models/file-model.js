@@ -9,6 +9,9 @@ export const FileModel = new EntitySchema({
       primary: true,
       generated: true,
     },
+    title: {
+      type: 'varchar',
+    },
     filename: {
       type: 'varchar',
     },
