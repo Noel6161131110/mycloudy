@@ -1,7 +1,12 @@
 .env
-node_modules
 
-storage/
+mycloudyBackend/.env
+mycloudyFrontend/.env
+
+mycloudyBackend/node_modules
+mycloudyFrontend/node_modules
+
+mycloudyBackend/storage/
 
 # Ignore video files
 *.mp4
@@ -24,3 +29,28 @@ storage/
 *.wav
 *.ogg
 *.flac
+
+# Logs
+mycloudyFrontend/logs
+mycloudyFrontend/*.log
+mycloudyFrontend/npm-debug.log*
+mycloudyFrontend/yarn-debug.log*
+mycloudyFrontend/yarn-error.log*
+mycloudyFrontend/pnpm-debug.log*
+mycloudyFrontend/lerna-debug.log*
+
+
+mycloudyFrontend/dist
+mycloudyFrontend/dist-ssr
+mycloudyFrontend/*.local
+
+# Editor directories and files
+mycloudyFrontend/.vscode/*
+mycloudyFrontend/!.vscode/extensions.json
+mycloudyFrontend/.idea
+mycloudyFrontend/.DS_Store
+mycloudyFrontend/*.suo
+mycloudyFrontend/*.ntvs*
+mycloudyFrontend/*.njsproj
+mycloudyFrontend/*.sln
+mycloudyFrontend/*.sw?
