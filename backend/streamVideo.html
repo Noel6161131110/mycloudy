@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      body {
+        margin: 40px auto;
+        max-width: 650px;
+        line-height: 1.6;
+        font-size: 18px;
+        font-family: "Courier New", Courier, monospace;
+        color: #444;
+        padding: 0 10px;
+      }
+      h2 {
+        line-height: 1.2;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Video Streaming Player</h1>
+    <video id="videoPlayer" width="640" height="360" controls autoplay>
+        <source id="videoSource" src="http://127.0.0.1:8080/api/v1/file-operations/stream/video/2" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    
+    <script>
+        const VIDEO_ID = 2;
+        async function getVideoInfo() {
+            try {
+                const response = await fetch(`http://127.0.0.1:8080/api/v1/file-operations/video/${VIDEO_ID}`);
+                const data = await response.json();
+                return data.currentTrackAt; // Return the currentTrackAt value
+            } catch (error) {
+                console.error('Error fetching video info:', error);
+            }
+        }
+    
+        async function sendCurrentTime(currentTime) {
+            try {
+                const url = `http://127.0.0.1:8080/api/v1/file-operations/video/2?current_time=${currentTime}`; // Send time as a query param
+                const response = await fetch(url, { 
+                    method: "PUT"
+                });
+        
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error("Error saving playback time:", errorText);
+                }
+            } catch (error) {
+                console.error("Error saving playback time:", error);
+            }
+        }
+    
+        // Set video currentTime when metadata is loaded
+        document.getElementById('videoPlayer').addEventListener('loadedmetadata', async function() {
+            const currentTrackAt = await getVideoInfo(); // Get the currentTrackAt value
+            if (currentTrackAt) {
+                this.currentTime = currentTrackAt; // Set the current time of the video
+            }
+        });
+    
+        // When the video is paused, send the current playback time
+        document.getElementById('videoPlayer').addEventListener('pause', function() {
+            const currentTime = this.currentTime;
+            sendCurrentTime(currentTime);
+            console.log('Video paused at:', currentTime);
+        });
+    
+        // When the tab is closed or reloaded, send the current playback time
+        window.addEventListener('beforeunload', function(event) {
+            const video = document.getElementById('videoPlayer');
+            const currentTime = video.currentTime;
+            sendCurrentTime(currentTime);
+        });
+
+    </script>
+
+  </body>
+</html>
+
