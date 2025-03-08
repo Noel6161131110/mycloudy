@@ -6,20 +6,19 @@
 
 - **Video Streaming**: Stream videos and movies directly from your own server.
 - **Photo Management**: View and organize your photo library.
-- **Photo Editing**: Edit photos with built-in tools.
 - **ML-Based Image Classification**: Automatically classify photos based on people’s faces and other features.
 
 ## **Technologies Used**
 
-- **Frontend**: React
-- **Backend**: Node.js, Express
-- **Database**: MongoDB (or SQL depending on your choice)
-- **Machine Learning**: TensorFlow.js , OpenCV
+- **Frontend**: React (Vite)
+- **Backend**: Python, FastAPI
+- **Database**: PostgreSQL
+- **Machine Learning**: YOLO , OpenCV, Deepface
 
 ## **Installation**
 
 ### **Prerequisites**
 
-- Node.js installed
-- MongoDB (or SQL) installed and running
-- FFmpeg (for video streaming if needed)
+- Node.js, Python installed.
+- PostgreSQL Database.
+- FFmpeg (for video streaming if needed).
