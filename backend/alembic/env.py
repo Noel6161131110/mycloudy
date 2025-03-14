@@ -1,5 +1,6 @@
 from logging.config import fileConfig
 from src.app.v1.FileOperations.models import *
+from src.app.v1.Users.models import *
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context

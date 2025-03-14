@@ -14,6 +14,8 @@ sys.dont_write_bytecode = True
 async def lifespan(app : FastAPI):
     initDB()
     yield
+    
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 app = FastAPI(
     lifespan=lifespan,

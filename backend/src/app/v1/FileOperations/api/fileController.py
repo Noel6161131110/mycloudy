@@ -1,10 +1,11 @@
 from fastapi import UploadFile, File, HTTPException, Depends, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from sqlmodel import Session, select
-import os
+import os, datetime
 import aiofiles
 import ffmpeg
 from ..models.models import FileModel
+from ..schemas import *
 from src.database.db import get_session
 
 async def get_video_duration(file_path: str) -> float:
@@ -40,22 +41,33 @@ async def uploadFile(file: UploadFile = File(...), title: str = None, db: Sessio
     new_file = FileModel(title=title, filename=file.filename, file_extension=file_ext, file_path=file_path, file_type=file_type, total_length=total_length)
     db.add(new_file)
     db.commit()
-    return {"message": "File uploaded successfully!", "file_name": file.filename, "total_length": total_length or "Not a video file"}
-
+    
+    return JSONResponse(content={"message": "File uploaded successfully!", "file_name": file.filename, "total_length": total_length or "Not a video file"}, status_code=201)
 
 def getFiles(file_type: str, db: Session = Depends(get_session)):
     if file_type not in ["video", "audio", "image"]:
         raise HTTPException(status_code=400, detail="Invalid file type")
+    
     files = db.exec(select(FileModel).where(FileModel.file_type == file_type)).all()
-    return {"file_result": files}
+
+    files_data = [
+        {
+            **file.dict(),
+            "uploaded_at": file.uploaded_at.isoformat() if file.uploaded_at else None,
+            "last_updated_at": file.last_updated_at.isoformat() if file.last_updated_at else None
+        }
+        for file in files
+    ]
+
+    return JSONResponse(content={"files": files_data}, status_code=200)
 
 
 def getVideoInfo(file_id: int, db: Session = Depends(get_session)):
     video_file = db.get(FileModel, file_id)
     if not video_file:
         raise HTTPException(status_code=404, detail="Video file not found")
-    return {"filename": video_file.filename, "total_length": video_file.total_length or "Not a video file", "currentTrackAt": video_file.current_track_at or 0}
-
+    
+    return JSONResponse(content={"filename": video_file.filename, "total_length": video_file.total_length or "Not a video file", "currentTrackAt": video_file.current_track_at or 0}, status_code=200)
 
 def streamVideo(file_id: int, request: Request, db: Session = Depends(get_session)):
     video_file = db.get(FileModel, file_id)
@@ -104,9 +116,11 @@ def saveVideoTime(file_id: int, current_time: float, db: Session = Depends(get_s
     if not video_file:
         raise HTTPException(status_code=404, detail="Video file not found")
     video_file.current_track_at = current_time
+    video_file.last_updated_at = datetime.now()
     db.add(video_file)
     db.commit()
-    return {"message": "Current time saved successfully"}
+    
+    return JSONResponse(content={"message": "Video time saved successfully!"}, status_code=200)
 
 
 def showImage(file_id: int, db: Session = Depends(get_session)):
