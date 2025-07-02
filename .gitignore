@@ -24,7 +24,6 @@ authService/storage/
 *.jpg
 *.jpeg
 *.png
-*.gif
 *.bmp
 *.tiff
 *.svg
