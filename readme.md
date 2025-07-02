@@ -1,24 +1,29 @@
-# **My Cloudy**
+<p align="center">
+  <img 
+    src="https://raw.githubusercontent.com/Noel6161131110/mycloudy/main/assets/mycloudy_git_anim.gif" 
+    alt="MyCloudy Demo" 
+    style="max-width: 100%; height: auto;" 
+  />
+</p>
 
-**My Cloudy** is an open-source, self-hosted service that offers seamless video streaming, photo management, editing, and machine learning-based image classification, enabling you to manage your media collection directly from your own server.
+<h1 align="center">MYCLOUDY</h1>
 
-## **Features**
+<p align="center">
+  <strong>An open-source, self-hosted service to manage and stream your media collection effortlessly.</strong>
+</p>
 
-- **Video Streaming**: Stream videos and movies directly from your own server.
-- **Photo Management**: View and organize your photo library.
-- **ML-Based Image Classification**: Automatically classify photos based on people’s faces and other features.
+---
 
-## **Technologies Used**
+## Features
 
-- **Frontend**: React (Vite)
-- **Backend**: Python, FastAPI
-- **Database**: PostgreSQL
-- **Machine Learning**: YOLO , OpenCV, Deepface
+- **Video Streaming** — Stream videos and movies directly from your own server with a dedicated player.
+- **Music Streaming** — Enjoy streaming your music collection seamlessly.
+- **Photo Management** — View, organize, and manage your photo library.
+- **ML-Based Image Classification** — Automatically classify photos based on people’s faces and other features.
+- **User Management** — Manage users, roles, and permissions with ease.
+- **Storage Assignment** — Assign and manage storage limits per user.
+- **Watch Together** — Watch movies with friends in sync, directly from your server.
+- **Folder Organization** — Organize your media into folders for easier browsing.
+---
 
-## **Installation**
-
-### **Prerequisites**
-
-- Node.js, Python installed.
-- PostgreSQL Database.
-- FFmpeg (for video streaming if needed).
+<p align="center"><em>Manage your media. Own your data. With ❤️ open-source.</em></p>
