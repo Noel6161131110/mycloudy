@@ -1,21 +1,30 @@
-import React, { useState } from "react";
-import { Menu, X, BellRing, Bell, Folder, Users, Clock, Plus, Search, FilterIcon, House, MoreVertical, Settings, MessageCircle, Info, Sparkles } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { Menu, X, BellRing, Bell, Folder, Users, Clock, Plus, 
+        Search, FilterIcon, House, MoreVertical, Settings, MessageCircle, Info, 
+        Sparkles, UserPlus, LogOut, User } from "lucide-react";
 import HomeComponent from "../Home";
-
+import { handleLogout } from "../../../api/v1/Auth";
+import { useNavigate } from "react-router-dom";
 
 function SearchBar() {
   return (
-      <div className="flex-1 mx-4 w-full max-w-full lg:mx-8 flex justify-center ">
-          <div className="relative w-3/4 right-8">
-              <Search size={18} className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500" />
-              <input
-                  type="text"
-                  placeholder="Search in mycloudy"
-                  className="w-full pl-10 pr-10 py-2 border border-gray-300 font-poppins rounded-3xl focus:outline-none focus:ring-2 focus:ring-[#1795DC] focus:border-transparent"
-              />
-              <FilterIcon size={34} className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-500 cursor-pointer hover:bg-gray-200 rounded-2xl p-1.5" />
-          </div>
+    <div className="flex justify-center items-center w-full px-4">
+      <div className="relative w-full max-w-lg md:max-w-2xl lg:max-w-3xl">
+        <Search
+          size={18}
+          className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"
+        />
+        <input
+          type="text"
+          placeholder="Search in mycloudy"
+          className="w-full pl-10 pr-12 py-2 border border-gray-300 font-poppins rounded-3xl focus:outline-none focus:ring-2 focus:ring-[#1795DC] focus:border-transparent"
+        />
+        <FilterIcon
+          size={34}
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 cursor-pointer hover:bg-gray-200 rounded-2xl p-1.5"
+        />
       </div>
+    </div>
   );
 }
 
@@ -201,6 +210,31 @@ function SidebarMenuBottomMobile({ activeItemSideBar, setActiveItemSideBar }) {
 function Index() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeItemSideBar, setActiveItemSideBar] = useState("Home");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+  const navigate = useNavigate();
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    }
+
+    if (isMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    } else {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
+  const name = sessionStorage.getItem("name");
+  const email = sessionStorage.getItem("email");
 
   return (
     <div className="flex h-screen bg-[#FAF9F6]">
@@ -251,19 +285,47 @@ function Index() {
             </div> */}
 
             <hr className="border-t border-gray-300 my-2" />
+          <div className="relative">
             {/* User Profile */}
-            <div className="flex items-center justify-between p-1.5 rounded-lg hover:bg-gray-200 transition">
+            <div className="flex items-center justify-between p-1.5 rounded-lg transition">
               {/* User Avatar */}
               <img className="w-10 h-10 rounded-full" src="https://avatar.iran.liara.run/public/42" alt="User Avatar" />
 
               {/* User Info */}
               <div className="ml-3 flex-1 overflow-hidden">
-                <p className="text-gray-800 font-medium font-poppins truncate">Noel Paul George</p>
-                <p className="text-gray-500 text-sm truncate">noelpaulgeorge@gmail.com</p>
+                <p className="text-gray-800 font-medium font-poppins truncate">{name}</p>
+                <p className="text-gray-500 text-sm truncate">{email}</p>
               </div>
 
               {/* Three-Dot Menu */}
-              <MoreVertical className="text-gray-500 w-5 h-5 cursor-pointer" />
+              <MoreVertical
+                className="text-gray-500 w-6 h-6 p-0.5 rounded-2xl hover:bg-gray-200 cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevents unwanted reopens
+                  setIsMenuOpen((prev) => !prev);
+                }}
+              />
+            </div>
+
+            {/* Dropdown Menu */}
+            {isMenuOpen && (
+              <div ref={menuRef} className="absolute right-1 bottom-14 w-40 bg-white shadow-lg rounded-xl overflow-hidden z-10">
+                <button
+                  onClick={() => alert("Profile Clicked")}
+                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 w-full transition-all"
+                >
+                  <User size={16} className="mr-2" />
+                  Profile
+                </button>
+                <button
+                  onClick={() => handleLogout(navigate)}
+                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-[#EF4444] hover:text-white w-full transition-all"
+                >
+                  <LogOut size={16} className="mr-2" />
+                  Logout
+                </button>
+              </div>
+            )}
             </div>
           </div>
       </aside>
@@ -318,21 +380,47 @@ function Index() {
 
               {/* Divider */}
               <div className="flex-1"></div> {/* Push content above */}
+              <div className="relative">
               <div className="border-t border-gray-300 my-2"></div>
 
               {/* User Profile - Stays at the bottom */}
-              <div className="p-1.5 rounded-lg hover:bg-gray-200 transition flex items-center justify-between">
+              <div className="p-1.5 rounded-lg transition flex items-center justify-between">
                 {/* User Avatar */}
                 <img className="w-10 h-10 rounded-full" src="https://avatar.iran.liara.run/public/42" alt="User Avatar" />
 
                 {/* User Info */}
                 <div className="ml-3 flex-1 overflow-hidden">
-                  <p className="text-gray-800 font-medium font-poppins truncate">Noel Paul George</p>
-                  <p className="text-gray-500 text-sm truncate">noelpaulgeorge@gmail.com</p>
+                  <p className="text-gray-800 font-medium font-poppins truncate">{name}</p>
+                  <p className="text-gray-500 text-sm truncate">{email}</p>
                 </div>
 
                 {/* Three-Dot Menu */}
-                <MoreVertical className="text-gray-500 w-5 h-5 cursor-pointer" />
+                <MoreVertical className="text-gray-500 w-6 h-6 p-0.5 rounded-2xl cursor-pointer hover:bg-gray-200 " 
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevents unwanted reopens
+                  setIsMenuOpen((prev) => !prev);
+                }}/>
+              </div>
+
+              {/* Dropdown Menu */}
+              {isMenuOpen && (
+                <div ref={menuRef} className="absolute right-1 bottom-14 w-40 bg-white shadow-lg rounded-xl overflow-hidden z-10">
+                  <button
+                    onClick={() => alert("Profile Clicked")}
+                    className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 w-full transition-all"
+                  >
+                    <User size={16} className="mr-2" />
+                    Profile
+                  </button>
+                  <button
+                    onClick={() => handleLogout(navigate)}
+                    className="flex items-center px-4 py-2 text-gray-700 hover:bg-[#EF4444] hover:text-white w-full transition-all"
+                  >
+                    <LogOut size={16} className="mr-2" />
+                    Logout
+                  </button>
+                </div>
+              )}
               </div>
             </aside>
           </div>

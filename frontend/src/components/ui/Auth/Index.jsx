@@ -1,9 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import "./styles.css";
+import { CheckIfUsersExist, handleSubmit } from "../../../api/v1/Auth";
 
 function Index() {
   const [isLogin, setIsLogin] = useState(true);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -11,37 +14,21 @@ function Index() {
     confirmPassword: "",
   });
 
-  const toggleForm = () => setIsLogin(!isLogin);
+  useEffect(() => {
+    CheckIfUsersExist(setIsLogin);
+  }, []);
+
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const endpoint = isLogin ? "/api/login" : "/api/signup";
-    const payload = isLogin
-      ? { email: formData.email, password: formData.password }
-      : formData;
-
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
-      console.log("Response:", data);
-    } catch (error) {
-      console.error("Error:", error);
-    }
-  };
 
   return (
     <div className="relative flex flex-col justify-center items-center h-screen p-6 gradient-bg">
     {/* Typing Animation for "mycloudy" */}
     <motion.h1
-        className="text-6xl font-medium font-monoton text-[#1795DC] mb-6"
+        className="text-5xl font-medium font-monoton text-[#1795DC] mb-6 lg:text-6xl"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 2 }}
@@ -66,10 +53,13 @@ function Index() {
         transition={{ duration: 0.5, ease: "easeOut" }}
     >
         <h2 className="text-2xl font-semibold font-poppins text-black text-center mb-4">
-        {isLogin ? "LOGIN" : "SIGN UP"}
+        {isLogin ? "LOGIN" : "REGISTER"}
         </h2>
 
-        <form className="space-y-4">
+        <form
+          className="space-y-4"
+          onSubmit={(e) => handleSubmit(e, isLogin, formData, navigate)}
+        >
         {!isLogin && (
             <input
             type="text"
@@ -115,16 +105,11 @@ function Index() {
             type="submit"
             className="w-full bg-[#1795DC] text-white font-semibold py-2 rounded-3xl hover:bg-[#1078b4] transition"
         >
-            {isLogin ? "LOGIN" : "SIGN UP"}
+            {isLogin ? "LOGIN" : "REGISTER"}
         </button>
         </form>
 
-        <p className="text-sm text-center mt-4">
-        {isLogin ? "Don't have an account?" : "Already have an account?"}
-        <button className="text-[#1795DC] font-semibold ml-1" onClick={toggleForm}>
-            {isLogin ? "Sign Up" : "Login"}
-        </button>
-        </p>
+
     </motion.div>
     </div>
   );
