@@ -170,3 +170,10 @@ async def DeleteUser(
         return JSONResponse(content={"message": "User deleted successfully!"}, status_code=200)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+async def CreateInviteUser(
+        body: InviteUserCreateSchema, 
+        db: AsyncSession = Depends(getSession)
+    ):
+    pass

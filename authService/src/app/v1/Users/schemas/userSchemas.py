@@ -27,6 +27,16 @@ class UserCreateSchema(BaseModel):
         from_attributes = True
         
         
+class InviteUserCreateSchema(BaseModel):
+    linkToken: str
+    firstName: str
+    lastName: str
+    email: str
+    password: str
+    
+    class Config:
+        from_attributes = True
+
 class UserUpdateSchema(BaseModel):
     id: UUID
     firstName: str

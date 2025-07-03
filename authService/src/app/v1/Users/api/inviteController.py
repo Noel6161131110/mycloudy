@@ -112,17 +112,39 @@ async def GetInviteLink(
     except Exception as e:
         return JSONResponse(content={"message": str(e)}, status_code=500)
     
-def GetCreatedUserInfo(inviteId: str, db: Session = Depends(getSession)):
+async def GetCreatedUserInfo(
+        inviteId: str, 
+        db: AsyncSession = Depends(getSession)
+    ):
+    
     try:
-        inviteLink = db.exec(select(InviteLink).where(InviteLink.linkId == inviteId)).first()
-        if not inviteLink:
+        redis = await getRedis()
+        email = await redis.get(f"invite:{inviteId}")
+
+        if email:
+            return JSONResponse(content={"email": email}, status_code=200)
+
+        print(f"Fetching invite link from database for inviteId: {inviteId}")
+        
+        result = await db.exec(
+            select(InviteLink).where(InviteLink.linkToken == inviteId)
+        )
+        inviteInstance = result.first()
+
+        if not inviteInstance:
             return JSONResponse(content={"message": "Invite link not found"}, status_code=404)
+
+        now = datetime.now(timezone.utc)
+        if inviteInstance.validTill < now:
+     
+            await db.delete(inviteInstance)
+            await db.commit()
+            return JSONResponse(content={"message": "Token expired"}, status_code=410)
         
-        userInstance = db.get(Users, inviteLink.userId)
-        if not userInstance:
-            return JSONResponse(content={"message": "User not found"}, status_code=404)
-        
-        return JSONResponse(content={"userId": userInstance.id, "email": userInstance.email, "name": userInstance.name}, status_code=200)
+        ttl = int((inviteInstance.validTill - now).total_seconds())
+        await redis.set(f"invite:{inviteId}", inviteInstance.emailId, ex=ttl)
+
+        return JSONResponse(content={"email": inviteInstance.emailId}, status_code=200)
+
     except Exception as e:
         return JSONResponse(content={"message": str(e)}, status_code=500)
-    
