@@ -31,7 +31,6 @@ class InviteUserCreateSchema(BaseModel):
     linkToken: str
     firstName: str
     lastName: str
-    email: str
     password: str
     
     class Config:

@@ -148,3 +148,26 @@ async def GetCreatedUserInfo(
 
     except Exception as e:
         return JSONResponse(content={"message": str(e)}, status_code=500)
+
+async def DeleteInviteLink(
+        body: InviteLinkDeleteSchema, 
+        db: AsyncSession = Depends(getSession)
+    ):
+    try:
+        result = await db.exec(select(InviteLink).where(InviteLink.createdBy == body.userId, InviteLink.id == body.id))
+        inviteLink = result.first()
+        
+        if not inviteLink:
+            return JSONResponse(content={"message": "Invite link not found"}, status_code=404)
+        
+        await db.delete(inviteLink)
+        await db.commit()
+        
+        redis = await getRedis()
+        await redis.delete(f"invite:{inviteLink.linkToken}")
+        
+        return JSONResponse(content={"message": "Invite link deleted successfully"}, status_code=200)
+    
+    except Exception as e:
+        print(f"Error in DeleteInviteLink: {e}")
+        return JSONResponse(content={"message": str(e)}, status_code=500)

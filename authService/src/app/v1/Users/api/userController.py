@@ -1,12 +1,14 @@
 from fastapi import HTTPException, Depends, Body
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
-from ..models.models import Users, PasswordHash, Roles
+from ..models.models import Users, PasswordHash, Roles, InviteLink
 from src.database.db import getSession
+from src.database.redis import getRedis
 from src.app.v1.Users.services.auth import CreateAccessToken, CreateRefreshToken
 from src.app.v1.Users.schemas.userSchemas import *
 from ..utils import *
 from sqlmodel.ext.asyncio.session import AsyncSession
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4, UUID
 
 
@@ -176,4 +178,93 @@ async def CreateInviteUser(
         body: InviteUserCreateSchema, 
         db: AsyncSession = Depends(getSession)
     ):
-    pass
+
+    try:
+        
+        redis = await getRedis()
+        linkKey = f"invite:{body.linkToken}"
+        
+        email = await redis.get(linkKey)
+        
+        inviteLink = None
+        if not email:
+            result = await db.exec(select(InviteLink).where(InviteLink.linkToken == body.linkToken))
+            inviteLink = result.first()
+
+            if not inviteLink:
+                return JSONResponse(content={"message": "Invalid invite link"}, status_code=400)
+            
+            now = datetime.now(timezone.utc)
+            if inviteLink.validTill < now:
+        
+                await db.delete(inviteLink)
+                await db.commit()
+                return JSONResponse(content={"message": "Token expired"}, status_code=410)
+            
+            email = inviteLink.emailId
+            
+            ttl_seconds = int((inviteLink.validTill - now).total_seconds())
+            await redis.set(linkKey, email, ex=ttl_seconds)
+
+        result = await db.exec(select(Users).where(Users.email == email))
+  
+        if result.first():
+            return JSONResponse(content={"message": "Email already exists"}, status_code=400)
+        
+        
+        roleInstance = await db.exec(select(Roles).where(Roles.name == 'member'))
+        roleInstance = roleInstance.first()
+
+        newUser = Users(
+            id=uuid4(),
+            firstName=body.firstName,
+            lastName=body.lastName,
+            email=email,
+            roleId=roleInstance.id if roleInstance else None,
+        )
+        db.add(newUser)
+        await db.flush()
+
+        salt, hashedPassword = hashPassword(body.password)
+        userPassword = PasswordHash(
+            id=uuid4(),
+            userId=newUser.id,
+            hash=hashedPassword,
+            salt=salt
+        )
+        db.add(userPassword)
+
+        await db.commit()
+        await db.refresh(newUser)
+        
+        if inviteLink:
+            await db.delete(inviteLink)
+        else:
+            
+            inviteLink = await db.exec(select(InviteLink).where(InviteLink.linkToken == body.linkToken))
+            inviteLink = inviteLink.first()
+            if inviteLink:
+                await db.delete(inviteLink)
+                await db.commit()
+                
+        await redis.delete(linkKey)
+        await db.commit()
+
+        accessToken = CreateAccessToken(str(newUser.id))
+        refreshToken = CreateRefreshToken(str(newUser.id))
+
+        return JSONResponse(
+            content={
+                "message": "User created successfully!",
+                "accessToken": accessToken,
+                "refreshToken": refreshToken,
+                "firstName": newUser.firstName,
+                "lastName": newUser.lastName,
+                "email": newUser.email,
+            },
+            status_code=201
+        )
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail=str(e))

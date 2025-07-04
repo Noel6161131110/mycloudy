@@ -22,3 +22,10 @@ class InviteLinkGetSchema(BaseModel):
 
     class Config:
         from_attributes = True
+        
+class InviteLinkDeleteSchema(BaseModel):
+    userId: UUID
+    id: UUID
+    
+    class Config:
+        from_attributes = True

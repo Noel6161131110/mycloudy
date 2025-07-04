@@ -59,7 +59,7 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-app.include_router(v1Router, prefix="/v1")
+app.include_router(v1Router, prefix="/api/v1")
 
 
         

@@ -39,6 +39,12 @@ userRoutes = [
         "name": "Delete User - Used by Admin users to delete users",
         "path": "",
         "endpoint": DeleteUser                 # Should only be used by Admin users
+    },
+    {
+        "method": "POST",
+        "name": "Create User from Invite Link - Used by users to create user from invite link",
+        "path": "/register/invite",
+        "endpoint": CreateInviteUser   # Used by users to create user from invite
     }
 ]
 
@@ -60,6 +66,12 @@ inviteRoutes = [
         "name": "Create Invite Link - Used by Admin users to create invite links",
         "path": "",
         "endpoint": GenerateInviteLink           # Only used by Admin users to create invite links
+    },
+    {
+        "method": "DELETE",
+        "name": "Delete Invite Link - Used by Admin users to delete invite links",
+        "path": "",
+        "endpoint": DeleteInviteLink             # Only used by Admin users to delete invite links
     }
 ]
 
