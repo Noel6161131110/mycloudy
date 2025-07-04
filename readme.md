@@ -1,6 +1,6 @@
 <p align="center">
   <img 
-    src="https://raw.githubusercontent.com/Noel6161131110/mycloudy/main/assets/mycloudy_git_anim.gif" 
+    src="https://raw.githubusercontent.com/Noel6161131110/mycloudy/main/assets/mycloudy_banner_animation.gif" 
     alt="MyCloudy Demo" 
     style="max-width: 100%; height: auto;" 
   />
