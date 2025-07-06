@@ -3,12 +3,16 @@ from datetime import datetime, timedelta, timezone
 from ..models.models import *
 from jose import JWTError
 from src.config.variables import SECRET_KEY
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
+from src.database.db import getSession
 from sqlmodel import Session, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from uuid import UUID
 
-async def GetUserById(userId: UUID, db: AsyncSession):
+async def GetUserById(
+    userId: UUID, 
+    db: AsyncSession = Depends(getSession)
+    ):
     try:
         result = await db.exec(select(Users).where(Users.id == userId))
         user = result.first()
@@ -57,13 +61,15 @@ async def ValidateToken(token):
             print(f"JWT Error: {e}")
         return None
     
-async def ValidateAccessToken(token):
+async def ValidateAccessToken(token, db: AsyncSession):
     try:
         payload = await ValidateToken(token)
         if payload and payload.get('userId'):
-            userExist = await GetUserById(payload.get('userId'))
+            userExist = await GetUserById(payload.get('userId'), db=db)
             if userExist:
                 return userExist
+            else:
+                return None
     except Exception as e:
         print(f"Error in ValidateAccessToken: {e}")
     return None

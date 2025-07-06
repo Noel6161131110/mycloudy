@@ -15,7 +15,9 @@ IS_PRODUCTION = os.getenv("ENV_MODE") == "PRODUCTION"
 @asynccontextmanager
 async def lifespan(app : FastAPI):
     initDB()
+   
     yield
+
 
 app = FastAPI(
     lifespan=lifespan,
@@ -39,7 +41,7 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-app.include_router(v1Router)
+app.include_router(v1Router, prefix="/api/v1")
 
 async def main():
     """

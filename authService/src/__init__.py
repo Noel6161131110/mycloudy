@@ -9,6 +9,7 @@ from uuid import uuid4
 from src.app.v1.routes import router as v1Router
 import os, sys, uvicorn, asyncio
 from dotenv import load_dotenv
+from src.services.grpc_server import serve_grpc
 
 load_dotenv()
 
@@ -33,7 +34,17 @@ async def lifespan(app : FastAPI):
     await initDB()
     await ensureDefaultRoles()
     await getRedis()
+    
+    grpc_task = asyncio.create_task(serve_grpc())
+    
     yield
+
+    grpc_task.cancel()
+    try:
+        await grpc_task
+    except asyncio.CancelledError:
+        print("gRPC server stopped")
+    
     await closeRedis()
 
 

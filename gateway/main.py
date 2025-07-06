@@ -34,8 +34,8 @@ app.add_middleware(
 )
 
 services = {
-    "auth": "http://127.0.0.1:8001",
-    "files": "http://127.0.0.1:8002"
+    "auth": f"{os.environ.get('AUTH_SERVICE_URL')}",
+    "file": f"{os.environ.get('FILE_SERVICE_URL')}"
 }
 
 unprotectedRoutes = {
@@ -54,8 +54,8 @@ async def forwardRequest(serviceUrl: str, method: str, path: str, body=None, hea
 def isUnprotected(service: str, path: str) -> bool:
     return service in unprotectedRoutes and path in unprotectedRoutes[service]
 
-@app.api_route("/api/v1/{service}/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
-async def gateway(service: str, path: str, request: Request):
+@app.api_route("/{service}/api/{version}/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def gateway(service: str, version: str, path: str, request: Request):
     if service not in services:
         raise HTTPException(status_code=404, detail="Service not found")
     
@@ -83,7 +83,7 @@ async def gateway(service: str, path: str, request: Request):
     forwardHeaders = {k: v for k, v in request.headers.items() if k.lower() not in excludedHeaders}
 
     try:
-        response = await forwardRequest(serviceUrl, request.method, f"/{path}", body, forwardHeaders)
+        response = await forwardRequest(serviceUrl, request.method, f"/api/{version}/{path}", body, forwardHeaders)
     except httpx.RequestError as exc:
         raise HTTPException(status_code=502, detail=f"Upstream error: {exc}")
     

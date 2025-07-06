@@ -45,6 +45,12 @@ routes = [
         "name": "Save Video Time",
         "path": "/video/{file_id}",
         "endpoint": saveVideoTime
+    },
+    {
+        "method": "POST",
+        "name": "Test Validate Token",
+        "path": "/test/validate-token",
+        "endpoint": testValidateToken
     }
 ]
 

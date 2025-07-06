@@ -7,7 +7,28 @@ import ffmpeg
 from ..models.models import FileModel
 from ..schemas import *
 from src.database.db import get_session
+import asyncio
+from src.services.grpc_client import validateAccessToken
 
+async def testValidateToken(access_token: str):
+    result = await validateAccessToken(access_token)
+    
+    if result['status'] == 'valid':
+        return JSONResponse(
+            content={"status": "valid", "userId": result['userId']},
+            status_code=200
+        )
+    elif result['status'] == 'invalid':
+        return JSONResponse(
+            content={"status": "invalid", "userId": None},
+            status_code=401
+        )
+    else:
+        return JSONResponse(
+            content={"status": "error", "userId": None},
+            status_code=500
+        )
+    
 async def get_video_duration(file_path: str) -> float:
     probe = ffmpeg.probe(file_path)
     return float(probe['format']['duration'])
