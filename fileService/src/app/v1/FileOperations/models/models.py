@@ -24,6 +24,10 @@ class FileModel(SQLModel, table=True):
     folderId: UUID = Field(
         sa_column=Column("folderId", ForeignKey("Folders.id"), nullable=False)
     )
+    
+    tagId: Optional[UUID] = Field(
+        sa_column=Column("tagId", ForeignKey("Tags.id"), nullable=True)
+    )
 
     totalVideoLength: Optional[float] = Field(
         sa_column=Column("totalVideoLength", Float, nullable=False, default=None)

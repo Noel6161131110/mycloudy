@@ -9,12 +9,15 @@ gateway/env/
 authService/env/
 fileService/env/
 
+fileService/MYCLOUDY_VAULT/
+fileService/MYCLOUDY_VAULT/*
+fileService/MYCLOUDY_VAULT/*.mp4
 frontend/node_modules
 
 fileService/storage/
 authService/storage/
 # Ignore video files
-
+*.mp4
 *.avi
 *.mkv
 *.mov
