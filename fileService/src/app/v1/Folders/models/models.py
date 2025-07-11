@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 from sqlmodel import SQLModel, Field, Column
-from sqlalchemy import ForeignKey, DateTime
+from sqlalchemy import ForeignKey, DateTime, String
 
 
 class Folders(SQLModel, table=True):
@@ -43,4 +43,26 @@ class Tags(SQLModel, table=True):
 
     createdAt: Optional[datetime] = Field(
         default=None, sa_column=Column("createdAt", DateTime, nullable=False, default=datetime.now())
+    )
+
+
+class FolderShares(SQLModel, table=True):
+    __tablename__ = "FolderShares"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+
+    folderId: UUID = Field(
+        sa_column=Column("folderId", ForeignKey("Folders.id"), nullable=False)
+    )
+    
+    sharedWithUserId: UUID
+    
+    sharedByUserId: UUID
+    
+    permission: str = Field(
+        sa_column=Column("permission", String(length=20), nullable=False)
+    )
+    
+    sharedAt: datetime = Field(
+        sa_column=Column("sharedAt", DateTime, nullable=False, default=datetime.now())
     )

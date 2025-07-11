@@ -1,6 +1,6 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Depends, Request
 from sqlmodel import Session, select
-from src.database.db import get_session
+from src.database.db import getSession
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import aiofiles
@@ -190,7 +190,7 @@ async def start_upload(
     tagId: Optional[UUID] = Form(None),
     description: Optional[str] = Form(None),
     title: Optional[str] = Form(None),
-    db: Session = Depends(get_session)
+    db: Session = Depends(getSession)
 ):
     """Start a new chunked upload session"""
     try:
@@ -281,7 +281,7 @@ async def upload_chunk(
 
 
 async def finalize_upload(
-    db: Session = Depends(get_session),
+    db: Session = Depends(getSession),
     file_id: str = Form(...)
     ):
     """Finalize the upload by combining all chunks"""

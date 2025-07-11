@@ -1,26 +1,14 @@
 from src.app.v1.FileOperations.api.fileController import *
-from src.app.v1.FileOperations.api.testfileUpload import *
+from src.app.v1.FileOperations.api.fileUpload import *
 from fastapi import APIRouter
 
 router = APIRouter()
-testRouter = APIRouter()
+
 routes = [
-    {
-        "method": "POST",
-        "name": "Upload File",
-        "path": "/upload",
-        "endpoint": uploadFile
-    },
-    {
-        "method": "POST",
-        "name": "Upload File Chunk",
-        "path": "/upload/chunk",
-        "endpoint": uploadFileAsChunk
-    },
     {
         "method": "GET",
         "name": "Get Files",
-        "path": "/files",
+        "path": "",
         "endpoint": getFiles
     },
     {
@@ -61,7 +49,7 @@ routes = [
     }
 ]
 
-testRoutes = [
+uploadRoutes = [
     {
         "method": "POST",
         "name": "Start Upload",
@@ -91,7 +79,7 @@ testRoutes = [
 for route in routes:
     router.add_api_route(route["path"], route["endpoint"], methods=[route["method"]], name=route["name"])
 
-for testRoute in testRoutes:
-    testRouter.add_api_route(testRoute["path"], testRoute["endpoint"], methods=[testRoute["method"]], name=testRoute["name"])
-    
-testRouter.add_api_route("/", get_upload_page, methods=["GET"], name="Get Upload Page", response_class=HTMLResponse)
+for route in uploadRoutes:
+    router.add_api_route(route["path"], route["endpoint"], methods=[route["method"]], name=route["name"])
+
+router.add_api_route("/", get_upload_page, methods=["GET"], name="Get Upload Page", response_class=HTMLResponse)

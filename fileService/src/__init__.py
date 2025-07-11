@@ -9,7 +9,7 @@ from datetime import datetime
 from uuid import uuid4
 from sqlmodel import Session, select
 from src.app.v1.Folders.models.models import Folders, Tags
-from src.database.db import engine
+from src.database.db import getSession
 load_dotenv()
 
 VAULT_DIR = "MYCLOUDY_VAULT"
@@ -19,14 +19,15 @@ sys.dont_write_bytecode = True
 IS_PRODUCTION = os.getenv("ENV_MODE") == "PRODUCTION"
 
 
-def initializeVaultAndDefaults():
+async def initializeVaultAndDefaults():
     if not os.path.exists(VAULT_DIR):
         os.makedirs(VAULT_DIR, exist_ok=True)
         # os.chmod(VAULT_DIR, 0o700)  # Uncomment if you want strict FS permissions
 
-    with Session(engine) as session:
+    async with getSession() as session:
         # Ensure root folder record exists
-        existing_folder = session.exec(select(Folders).where(Folders.name == VAULT_DIR)).first()
+        result = await session.exec(select(Folders).where(Folders.name == VAULT_DIR))
+        existing_folder = result.first()
         if not existing_folder:
             root_folder = Folders(
                 id=uuid4(),
@@ -39,12 +40,12 @@ def initializeVaultAndDefaults():
                 description="Root folder for MyCloudy Vault"
             )
             session.add(root_folder)
-            session.commit()
+            await session.commit()
 
         # Create default tags if they don't exist
         defaultTags = ["Movies", "Music", "Photos", "Documents"]
         for tagName in defaultTags:
-            tag = session.exec(select(Tags).where(Tags.name == tagName)).first()
+            tag = await session.exec(select(Tags).where(Tags.name == tagName))
             if not tag:
                 tag = Tags(
                     id=uuid4(),
@@ -53,13 +54,13 @@ def initializeVaultAndDefaults():
                     createdAt=datetime.now()
                 )
                 session.add(tag)
-                session.commit()
+                await session.commit()
                 
                 
 @asynccontextmanager
 async def lifespan(app : FastAPI):
-    initDB()
-    initializeVaultAndDefaults()
+    await initDB()
+    await initializeVaultAndDefaults()
 
     yield
 

@@ -1,9 +1,5 @@
-from fastapi import UploadFile, File, HTTPException, Depends, Request, Form
+from fastapi import File, HTTPException, Depends, Request, Form
 from fastapi.responses import StreamingResponse, JSONResponse
-from streaming_form_data import StreamingFormDataParser
-from streaming_form_data.targets import FileTarget, ValueTarget
-from streaming_form_data.validators import MaxSizeValidator
-from starlette.requests import ClientDisconnect
 from sqlmodel import Session, select
 import os, datetime
 import aiofiles
@@ -11,21 +7,21 @@ import ffmpeg
 from ..models.models import FileModel, FileShares
 from src.app.v1.Folders.models.models import Folders
 from ..schemas import *
-from src.database.db import get_session
-import shutil
+from src.database.db import getSession
+from typing import List
 from src.services.grpc_client import validateAccessToken
 from uuid import uuid4, UUID
-
 import random, string
+from sqlmodel.ext.asyncio.session import AsyncSession
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
+security = HTTPBearer()
 
-CHUNK_DIR = "chunks"
 FINAL_DIR = "MYCLOUDY_VAULT"
-ALLOWED_EXTENSIONS = ["mp4", "mov", "avi", "mkv", "webm", "mp3", "wav", "ogg", "flac", "jpg", "jpeg", "png"]
-MAX_CHUNK_SIZE = 1024 * 1024 * 1024 * 5
+
 
 def generate_upload_id():
-    now = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    now = datetime.now().strftime("%Y%m%d%H%M%S")
     rand_str = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
     return f"{now}_{rand_str}"
 
@@ -53,231 +49,82 @@ async def get_video_duration(file_path: str) -> float:
     return float(probe['format']['duration'])
 
 
-async def uploadFileAsChunk(
-    request: Request,
-    chunkNumber: int = Form(...),
-    totalChunks: int = Form(...),
-    uploadSessionId: Optional[str] = Form(None),
-    folderId: Optional[UUID] = Form(None),
-    tagId: Optional[UUID] = Form(None),
-    description: Optional[str] = Form(None),
-    title: Optional[str] = Form(None),
-    db: Session = Depends(get_session)
-):
-    try:
-        chunkNumber = int(chunkNumber)
-        totalChunks = int(totalChunks)
-        upload_session_id = uploadSessionId or generate_upload_id()
+async def getFiles(
+    file_type: Optional[str] = None,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(getSession)
+    ):
 
-        # Validate token & folder only for chunk 1 or last chunk
-        userId = None
-        if chunkNumber in (1, totalChunks):
-            auth_header = request.headers.get("Authorization")
-            if not auth_header or not auth_header.startswith("Bearer "):
-                raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-
-            access_token = auth_header.split("Bearer ")[-1]
-            result = await validateAccessToken(access_token)
-
-            if result['status'] == 'valid':
-                userId = result['userId']
-            elif result['status'] == 'invalid':
-                raise HTTPException(status_code=401, detail="Invalid access token")
-            else:
-                raise HTTPException(status_code=500, detail="Error validating access token")
-
-            if not folderId:
-                raise HTTPException(status_code=400, detail="folderId is required")
-
-            folder = db.exec(select(Folders).where(Folders.id == folderId)).first()
-            if not folder:
-                raise HTTPException(status_code=404, detail="Folder not found")
-
-            if folder.isSystem:
-                if folder.createdBy is not None:
-                    raise HTTPException(status_code=403, detail="Cannot upload to system folder owned by another user")
-            else:
-                if not folder.createdBy:
-                    raise HTTPException(status_code=403, detail="Cannot upload to a folder without an owner")
-
-        # Save chunk
-        chunkFolder = os.path.join(CHUNK_DIR, upload_session_id)
-        os.makedirs(chunkFolder, exist_ok=True)
-        chunkPath = os.path.join(chunkFolder, f"chunk_{chunkNumber}")
-
-        file_target = FileTarget(chunkPath, validator=MaxSizeValidator(MAX_CHUNK_SIZE))
-        parser = StreamingFormDataParser(headers=request.headers)
-        parser.register("file", file_target)
-
-        try:
-            async for chunk in request.stream():
-                parser.data_received(chunk)
-        except ClientDisconnect:
-            raise HTTPException(status_code=499, detail="Client disconnected")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error receiving file chunk: {str(e)}")
-
-        if not file_target.multipart_filename:
-            raise HTTPException(status_code=422, detail="File is missing or invalid")
-
-        print(f"[Chunk {chunkNumber}] Written to {chunkPath}")
-
-        # If final chunk, merge all
-        if chunkNumber == totalChunks:
-            print("🔧 Final chunk received. Starting merge process.")
-            finalFileName = f"{uuid4()}_{file_target.multipart_filename}"
-            finalPath = os.path.join(FINAL_DIR, finalFileName)
-            os.makedirs(FINAL_DIR, exist_ok=True)
-
-            try:
-                with open(finalPath, "wb") as dest:
-                    for i in range(1, totalChunks + 1):
-                        chunkFile = os.path.join(chunkFolder, f"chunk_{i}")
-                        if not os.path.exists(chunkFile):
-                            raise HTTPException(status_code=400, detail=f"Missing chunk {i}")
-                        with open(chunkFile, "rb") as src:
-                            shutil.copyfileobj(src, dest)
-                        os.remove(chunkFile)
-                os.rmdir(chunkFolder)
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Error merging chunks: {str(e)}")
-
-            # File type determination
-            fileExt = file_target.multipart_filename.split(".")[-1].lower()
-            if fileExt not in ALLOWED_EXTENSIONS:
-                os.remove(finalPath)
-                raise HTTPException(status_code=400, detail="Invalid file type")
-
-            fileType = "unknown"
-            totalLength = None
-            if fileExt in ["mp4", "mov", "avi", "mkv", "webm"]:
-                fileType = "video"
-                totalLength = await get_video_duration(finalPath)
-            elif fileExt in ["mp3", "wav", "ogg", "flac"]:
-                fileType = "audio"
-            elif fileExt in ["jpg", "jpeg", "png"]:
-                fileType = "image"
-
-            finalTitle = title or file_target.multipart_filename
-            finalDescription = description or ""
-
-            # Save file metadata to DB
-            newFile = FileModel(
-                title=finalTitle,
-                description=finalDescription,
-                fileName=finalFileName,
-                fileExtension=fileExt,
-                fileSize=os.path.getsize(finalPath),
-                filePath=finalPath,
-                fileType=fileType,
-                totalVideoLength=totalLength,
-                lastModified=datetime.utcnow(),
-                folderId=folderId,
-                tagId=tagId
-            )
-            db.add(newFile)
-            db.commit()
-            db.refresh(newFile)
-
-            fileShare = FileShares(
-                fileId=newFile.id,
-                folderId=folderId,
-                sharedWithUserId=userId,
-                sharedByUserId=userId,
-                permission="owner",
-                sharedAt=datetime.utcnow()
-            )
-            db.add(fileShare)
-            db.commit()
-
-            print(f"✅ File {finalFileName} uploaded and saved by user {userId}")
-
-            return JSONResponse(
-                content={
-                    "message": "File uploaded successfully!",
-                    "fileName": finalFileName,
-                    "totalLength": totalLength or "N/A"
-                },
-                status_code=201
-            )
-
-        return JSONResponse(
-            content={
-                "message": f"Chunk {chunkNumber}/{totalChunks} uploaded.",
-                "uploadId": upload_session_id
-            },
-            status_code=200
-        )
-
-    except HTTPException as e:
-        print(f"HTTP Exception: {e.detail}")
-        return JSONResponse(content={"detail": e.detail}, status_code=e.status_code)
-
-    except Exception as e:
-        print(f"Error in uploadFileAsChunk: {str(e)}")
-        return JSONResponse(
-            content={"detail": "Internal server error"},
-            status_code=500
-        )
-        
-
-async def uploadFile(file: UploadFile = File(...), title: str = None, db: Session = Depends(get_session)):
-    if not title:
-        raise HTTPException(status_code=400, detail="Title is required")
+    access_token = credentials.credentials
     
-    file_ext = file.filename.split(".")[-1]
-    file_path = f"storage/{file.filename}"
-    os.makedirs("storage", exist_ok=True)
-    
-    async with aiofiles.open(file_path, "wb") as buffer:
-        while content := await file.read(1024):
-            await buffer.write(content)
-    
-    file_type = "unknown"
-    if file_ext in ["mp4", "mov", "avi", "mkv", "webm"]:
-        file_type = "video"
-        total_length = await get_video_duration(file_path)
-    elif file_ext in ["mp3", "wav", "ogg", "flac"]:
-        file_type = "audio"
-        total_length = None
-    elif file_ext in ["jpg", "jpeg", "png"]:
-        file_type = "image"
-        total_length = None
+
+    result = await validateAccessToken(access_token)
+
+    if result['status'] != 'valid':
+        raise HTTPException(status_code=401, detail="Invalid access token")
+
+    userId = result['userId']
+
+    # Step 2: Get FileShares shared with the user
+    file_share_query = await db.exec(
+        select(FileShares).where(FileShares.sharedWithUserId == userId)
+    )
+    file_shares: List[FileShares] = file_share_query.all()
+
+    if not file_shares:
+        return JSONResponse(content={"files": []}, status_code=200)
+
+    # Step 3: Extract file IDs from FileShares
+    file_ids = [share.fileId for share in file_shares]
+
+    # Step 4: Build base query for Files
+    query = select(FileModel).where(FileModel.id.in_(file_ids))
+
+    # Step 5: Filter by file_type if provided
+    if file_type:
+        if file_type not in ["video", "audio", "image", "document"]:
+            raise HTTPException(status_code=400, detail="Invalid file type")
+        query = query.where(FileModel.fileType == file_type)
     else:
-        raise HTTPException(status_code=400, detail="Invalid file type")
+        # If no file_type is provided, we can include all types
+        query = query.where(FileModel.fileType.in_(["video", "audio", "image", "document"]))
 
-    new_file = FileModel(title=title, filename=file.filename, fileExtension=file_ext, filePath=file_path, fileType=file_type, totalVideoLength=total_length)
-    db.add(new_file)
-    db.commit()
-    
-    return JSONResponse(content={"message": "File uploaded successfully!", "file_name": file.filename, "total_length": total_length or "Not a video file"}, status_code=201)
+    # Step 6: Execute final query
+    result = await db.exec(query)
+    files: List[FileModel] = result.all()
 
-def getFiles(file_type: str, db: Session = Depends(get_session)):
-    if file_type not in ["video", "audio", "image"]:
-        raise HTTPException(status_code=400, detail="Invalid file type")
-
-    files = db.exec(select(FileModel).where(FileModel.fileType == file_type)).all()
-
+    # Step 7: Prepare response
     files_data = [
         {
-            **file.dict(),
-            "uploadedAt": file.uploadedAt.isoformat() if file.uploadedAt else None,
-            "lastUpdatedAt": file.lastUpdatedAt.isoformat() if file.lastUpdatedAt else None
+            "id": str(file.id),
+            "title": file.title,
+            "description": file.description,
+            "fileName": file.fileName,
+            "fileExtension": file.fileExtension,
+            "fileSize": file.fileSize,
+            "filePath": file.filePath,
+            "fileType": file.fileType,
+            "lastModified": file.lastModified.isoformat(),
+            "folderId": str(file.folderId),
+            "tagId": str(file.tagId) if file.tagId else None,
+            "totalVideoLength": file.totalVideoLength
         }
         for file in files
     ]
 
     return JSONResponse(content={"files": files_data}, status_code=200)
+        
 
 
-def getVideoInfo(file_id: int, db: Session = Depends(get_session)):
+
+def getVideoInfo(file_id: int, db: Session = Depends(getSession)):
     video_file = db.get(FileModel, file_id)
     if not video_file:
         raise HTTPException(status_code=404, detail="Video file not found")
     
     return JSONResponse(content={"filename": video_file.filename, "total_length": video_file.total_length or "Not a video file", "currentTrackAt": video_file.current_track_at or 0}, status_code=200)
 
-def streamVideo(file_id: int, request: Request, db: Session = Depends(get_session)):
+def streamVideo(file_id: int, request: Request, db: Session = Depends(getSession)):
     video_file = db.get(FileModel, file_id)
     if not video_file:
         raise HTTPException(status_code=404, detail="Video file not found")
@@ -319,7 +166,7 @@ def streamVideo(file_id: int, request: Request, db: Session = Depends(get_sessio
     )
 
 
-def saveVideoTime(file_id: int, current_time: float, db: Session = Depends(get_session)):
+def saveVideoTime(file_id: int, current_time: float, db: Session = Depends(getSession)):
     video_file = db.get(FileModel, file_id)
     if not video_file:
         raise HTTPException(status_code=404, detail="Video file not found")
@@ -331,13 +178,13 @@ def saveVideoTime(file_id: int, current_time: float, db: Session = Depends(get_s
     return JSONResponse(content={"message": "Video time saved successfully!"}, status_code=200)
 
 
-def showImage(file_id: int, db: Session = Depends(get_session)):
+def showImage(file_id: int, db: Session = Depends(getSession)):
     image_file = db.get(FileModel, file_id)
     if not image_file:
         raise HTTPException(status_code=404, detail="Image file not found")
     return StreamingResponse(open(image_file.file_path, "rb"), media_type="image/jpeg")
 
-def streamAudio(file_id: int, db: Session = Depends(get_session)):
+def streamAudio(file_id: int, db: Session = Depends(getSession)):
     audio_file = db.get(FileModel, file_id)
     if not audio_file:
         raise HTTPException(status_code=404, detail="Audio file not found")

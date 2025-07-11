@@ -32,3 +32,19 @@ class Activity(SQLModel, table=True):
     actionTime: datetime = Field(
         sa_column=Column("actionTime", DateTime, nullable=False, default=datetime.now())
     )
+
+
+class RecentlyOpenedFiles(SQLModel, table=True):
+    __tablename__ = "RecentlyOpenedFiles"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+
+    fileId: UUID = Field(
+        sa_column=Column("fileId", ForeignKey("Files.id"), nullable=False)
+    )
+    
+    userId: UUID
+    
+    openedAt: datetime = Field(
+        sa_column=Column("openedAt", DateTime, nullable=False, default=datetime.now())
+    )

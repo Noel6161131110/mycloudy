@@ -7,14 +7,13 @@ class FileSchema(BaseModel):
     id: Optional[int] = None
     title: str
     filename: str
-    file_extension: str
-    file_path: str
-    file_type: str
-    total_length: Optional[float] = None
-    current_track_at: Optional[float] = None
-    uploaded_at: Optional[datetime] = None
-    last_updated_at: Optional[datetime] = None
-    last_updated_by: Optional[str] = None
+    fileExtension: str
+    filePath: str
+    fileType: str
+    totalLength: Optional[float] = None
+    currentTrackAt: Optional[float] = None
+    lastModified: Optional[datetime] = None
+
 
     class Config:
         from_attributes = True  # Required for SQLModel compatibility
