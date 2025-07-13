@@ -1,8 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Depends, Request
 from sqlmodel import Session, select
 from src.database.db import getSession
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
+from src.config.variables import FINAL_DIR
 import aiofiles
 import os
 import hashlib
@@ -12,6 +11,7 @@ import shutil
 from pathlib import Path
 import logging
 from ..models.models import FileModel, FileShares
+from src.app.v1.Activity.models.models import Activity
 from src.app.v1.Folders.models.models import Folders
 import ffmpeg
 from datetime import datetime
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 
 # Configuration
-UPLOAD_DIR = Path("MYCLOUDY_VAULT")
+UPLOAD_DIR = Path(FINAL_DIR)
 TEMP_DIR = Path("temp_chunks")
 MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024  # 5GB
 CHUNK_SIZE = 1024 * 1024  # 1MB chunks
@@ -160,6 +160,8 @@ class ChunkedUploadManager:
             )
             db.add(file_share)
             db.commit()
+            
+            
             
             # Clean up temporary chunks
             shutil.rmtree(upload_info['chunk_dir'])

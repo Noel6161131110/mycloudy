@@ -16,4 +16,4 @@ class FileSchema(BaseModel):
 
 
     class Config:
-        from_attributes = True  # Required for SQLModel compatibility
+        from_attributes = True

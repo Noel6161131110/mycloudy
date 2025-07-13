@@ -1,9 +1,6 @@
 from fastapi import File, HTTPException, Depends, Request, Form
 from fastapi.responses import StreamingResponse, JSONResponse
 from sqlmodel import Session, select
-import os, datetime
-import aiofiles
-import ffmpeg
 from ..models.models import FileModel, FileShares
 from src.app.v1.Folders.models.models import Folders
 from ..schemas import *
@@ -11,14 +8,11 @@ from src.database.db import getSession
 from typing import List
 from src.services.grpc_client import validateAccessToken
 from uuid import uuid4, UUID
-import random, string
 from sqlmodel.ext.asyncio.session import AsyncSession
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
-security = HTTPBearer()
-
-FINAL_DIR = "MYCLOUDY_VAULT"
-
+from fastapi.security import HTTPAuthorizationCredentials
+from src.security import security
+from src.config.variables import FINAL_DIR
+import os, datetime, ffmpeg, random, string
 
 def generate_upload_id():
     now = datetime.now().strftime("%Y%m%d%H%M%S")

@@ -10,6 +10,7 @@ from uuid import uuid4
 from sqlmodel import Session, select
 from src.app.v1.Folders.models.models import Folders, Tags
 from src.database.db import getSession
+
 load_dotenv()
 
 VAULT_DIR = "MYCLOUDY_VAULT"
@@ -45,13 +46,16 @@ async def initializeVaultAndDefaults():
         # Create default tags if they don't exist
         defaultTags = ["Movies", "Music", "Photos", "Documents"]
         for tagName in defaultTags:
-            tag = await session.exec(select(Tags).where(Tags.name == tagName))
-            if not tag:
+            tag = await session.exec(select(Tags).where(Tags.name == tagName, Tags.isSystem == True))
+            
+            if not tag.first():
+                print(f"Creating default tag: {tagName}")
                 tag = Tags(
                     id=uuid4(),
                     name=tagName,
                     createdBy=None,
-                    createdAt=datetime.now()
+                    createdAt=datetime.now(),
+                    isSystem=True
                 )
                 session.add(tag)
                 await session.commit()

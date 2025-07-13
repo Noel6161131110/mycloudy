@@ -17,8 +17,13 @@ class Folders(SQLModel, table=True):
         default=None,
         sa_column=Column("parentId", ForeignKey("Folders.id"), nullable=True)
     )
+    
     tagId: Optional[UUID] = Field(
-        sa_column=Column("tagId", ForeignKey("Tags.id"), nullable=True)
+        sa_column=Column(
+            "tagId",
+            ForeignKey("Tags.id", ondelete="SET NULL"),
+            nullable=True
+        )
     )
     createdBy: Optional[UUID] = Field(default=None, nullable=True)
 
@@ -44,6 +49,8 @@ class Tags(SQLModel, table=True):
     createdAt: Optional[datetime] = Field(
         default=None, sa_column=Column("createdAt", DateTime, nullable=False, default=datetime.now())
     )
+    
+    isSystem: bool = Field(default=False)
 
 
 class FolderShares(SQLModel, table=True):

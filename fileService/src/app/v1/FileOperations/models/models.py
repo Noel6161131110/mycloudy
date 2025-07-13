@@ -22,11 +22,19 @@ class FileModel(SQLModel, table=True):
         sa_column=Column("lastModified", DateTime, nullable=False)
     )
     folderId: UUID = Field(
-        sa_column=Column("folderId", ForeignKey("Folders.id"), nullable=False)
+        sa_column=Column(
+            "folderId",
+            ForeignKey("Folders.id", ondelete="CASCADE"),
+            nullable=False
+        )
     )
     
     tagId: Optional[UUID] = Field(
-        sa_column=Column("tagId", ForeignKey("Tags.id"), nullable=True)
+        sa_column=Column(
+            "tagId",
+            ForeignKey("Tags.id", ondelete="SET NULL"),
+            nullable=True
+        )
     )
 
     totalVideoLength: Optional[float] = Field(
