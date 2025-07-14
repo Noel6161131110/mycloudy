@@ -44,18 +44,25 @@ async def initializeVaultAndDefaults():
             await session.commit()
 
         # Create default tags if they don't exist
-        defaultTags = ["Movies", "Music", "Photos", "Documents"]
-        for tagName in defaultTags:
-            tag = await session.exec(select(Tags).where(Tags.name == tagName, Tags.isSystem == True))
-            
+        defaultTags = [
+            {"name": "Movies", "colorHex": "#FF5733"},
+            {"name": "Music", "colorHex": "#1E90FF"},
+            {"name": "Photos", "colorHex": "#32CD32"},
+            {"name": "Documents", "colorHex": "#8A2BE2"}
+        ]
+        
+        for tagData in defaultTags:
+            tag = await session.exec(select(Tags).where(Tags.name == tagData["name"], Tags.isSystem == True))
+
             if not tag.first():
-                print(f"Creating default tag: {tagName}")
+                print(f"Creating default tag: {tagData['name']}")
                 tag = Tags(
                     id=uuid4(),
-                    name=tagName,
+                    name=tagData["name"],
                     createdBy=None,
                     createdAt=datetime.now(),
-                    isSystem=True
+                    isSystem=True,
+                    colorHex=tagData["colorHex"]
                 )
                 session.add(tag)
                 await session.commit()

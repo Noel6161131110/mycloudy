@@ -35,6 +35,12 @@ class Folders(SQLModel, table=True):
     )
     
     isSystem: bool = Field(default=False, nullable=False)
+    
+    colorHex: Optional[str] = Field(
+        default='#808080',
+        sa_column=Column("colorHex", String(length=7), nullable=True),
+        description="Hex code representing tag color (e.g., #FF5733)"
+    )
 
 
 class Tags(SQLModel, table=True):
@@ -50,7 +56,17 @@ class Tags(SQLModel, table=True):
         default=None, sa_column=Column("createdAt", DateTime, nullable=False, default=datetime.now())
     )
     
+    updatedAt: Optional[datetime] = Field(
+        sa_column=Column("updatedAt", DateTime, nullable=False, default=datetime.now())
+    )
+    
     isSystem: bool = Field(default=False)
+    
+    colorHex: Optional[str] = Field(
+        default='#808080',
+        sa_column=Column("colorHex", String(length=7), nullable=True),
+        description="Hex code representing tag color (e.g., #FF5733)"
+    )
 
 
 class FolderShares(SQLModel, table=True):

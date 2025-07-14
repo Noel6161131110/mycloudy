@@ -3,38 +3,63 @@ from fastapi import APIRouter
 
 folderRouter = APIRouter()
 tagRouter = APIRouter()
-FolderController = FolderController()
+
+folderController = FolderController()
+tagController = TagController()
 
 folderRoutes = [
     {
         "method": "GET",
         "name": "Get Folders",
         "path": "",
-        "endpoint": FolderController.getAllFolders
+        "endpoint": folderController.getAllFolders
     },
     {
         "method": "GET",
         "name": "Get Folder by ID",
         "path": "/{folderId}",
-        "endpoint": FolderController.getFolderById
+        "endpoint": folderController.getFolderById
     },
     {
         "method": "POST",
         "name": "Create Folder",
         "path": "",
-        "endpoint": FolderController.createFolder
+        "endpoint": folderController.createFolder
     },
     {
         "method": "PUT",
         "name": "Update Folder",
         "path": "/{folderId}",
-        "endpoint": FolderController.updateFolder
+        "endpoint": folderController.updateFolder
     }
 ]
 
 
 tagRoutes = [
-
+    {
+        "method": "GET",
+        "name": "Get Tags",
+        "path": "",
+        "endpoint": tagController.getAllTags
+    },
+    {
+        "method": "POST",
+        "name": "Create Tag",
+        "path": "",
+        "endpoint": tagController.createTag
+    },
+    {
+        "method": "PUT",
+        "name": "Update Tag",
+        "path": "/{tagId}",
+        "endpoint": tagController.updateTag
+    },
+    {
+        "method": "DELETE",
+        "name": "Delete Tag",
+        "path": "/{tagId}",
+        "endpoint": tagController.deleteTag
+    }
 ]
 
 for route in folderRoutes:

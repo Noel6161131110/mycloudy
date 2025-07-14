@@ -2,14 +2,12 @@ from fastapi import File, HTTPException, Depends, Request, Form
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 from fastapi.encoders import jsonable_encoder
-from src.app.v1.Folders.models.models import Folders
+from src.app.v1.Folders.models.models import Folders, Tags
 from ..schemas import *
 from src.database.db import getSession
 from typing import List
-from src.services.grpc_client import validateAccessToken
 from uuid import uuid4, UUID
 from sqlmodel.ext.asyncio.session import AsyncSession
-from fastapi.security import HTTPAuthorizationCredentials
 from src.security import security
 from src.config.variables import FINAL_DIR
 import os, ffmpeg, random, string
@@ -96,6 +94,7 @@ class FolderController:
                 createdBy=userId,
                 createdAt=datetime.now(),
                 updatedAt=datetime.now(),
+                colorHex=folder.colorHex or '#808080',
                 isSystem=False
             )
 
@@ -160,6 +159,8 @@ class FolderController:
                 folder.description = folderUpdate.description
 
             folder.updatedAt = datetime.now()
+            folder.colorHex = folderUpdate.colorHex or '#808080'
+            
             await db.commit()
             await db.refresh(folder)
 
@@ -170,4 +171,131 @@ class FolderController:
 
         except Exception as e:
             print(f"Error in updateFolder: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+class TagController:
+    
+    def __init__(self):
+        pass
+    
+    async def getAllTags(
+        self,
+        createdBy: Optional[UUID] = None,
+        userId: str = Depends(getCurrentUserId),
+        db: AsyncSession = Depends(getSession),
+    ):
+        try:
+            if not createdBy:
+                tags = await db.exec(select(Tags))
+            else:
+                tags = await db.exec(select(Tags).where(Tags.createdBy == createdBy))
+            
+            result = tags.all()
+
+            tag_schemas: List[TagGetSchema] = [
+                TagGetSchema.model_validate(tag) for tag in result
+            ]
+
+            return JSONResponse(
+                content={"result": jsonable_encoder(tag_schemas)},
+                status_code=200
+            )
+        except Exception as e:
+            print(f"Error in getAllTags: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+    
+    async def createTag(
+        self,
+        tag: TagCreateSchema,
+        userId: str = Depends(getCurrentUserId),
+        db: AsyncSession = Depends(getSession)
+    ):
+        try:
+            newTag = Tags(
+                id=uuid4(),
+                name=tag.name,
+                description=tag.description,
+                createdBy=userId,
+                createdAt=datetime.now(),
+                isSystem=False,
+                colorHex=tag.colorHex or '#808080'
+            )
+
+            db.add(newTag)
+            await db.commit()
+            await db.refresh(newTag)
+
+            return JSONResponse(
+                content={"result": jsonable_encoder(newTag)},
+                status_code=201
+            )
+        except Exception as e:
+            print(f"Error in createTag: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    async def updateTag(
+        self,
+        tagId: UUID,
+        tagUpdate: TagCreateSchema,
+        userId: UUID = Depends(getCurrentUserId),
+        db: AsyncSession = Depends(getSession)
+    ):
+        try:
+            tag = await db.get(Tags, tagId)
+
+            if not tag or tag.createdBy != userId:
+                raise HTTPException(status_code=404, detail="Tag not found")
+
+            # Compare and update name
+            if tagUpdate.name and tagUpdate.name != tag.name:
+                tag.name = tagUpdate.name
+
+            # Compare and update description
+            if tagUpdate.description is not None and tagUpdate.description != tag.description:
+                tag.description = tagUpdate.description
+
+            tag.colorHex = tagUpdate.colorHex or '#808080'
+            tag.updatedAt = datetime.now()
+            
+            await db.commit()
+            await db.refresh(tag)
+
+            return JSONResponse(
+                content={"result": jsonable_encoder(tag)},
+                status_code=200
+            )
+
+        except HTTPException as httpExc:
+            raise httpExc
+
+        except Exception as e:
+            print(f"Error in updateTag: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    async def deleteTag(
+        self,
+        tagId: UUID,
+        userId: UUID = Depends(getCurrentUserId),
+        db: AsyncSession = Depends(getSession)
+    ):
+        try:
+            tag = await db.get(Tags, tagId)
+
+            if not tag or tag.createdBy != userId:
+                raise HTTPException(status_code=404, detail="Tag not found")
+
+            await db.delete(tag)
+            await db.commit()
+
+            return JSONResponse(
+                content={"message": "Tag deleted successfully"},
+                status_code=200
+            )
+
+        except HTTPException as httpExc:
+            raise httpExc
+
+        except Exception as e:
+            print(f"Error in deleteTag: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
