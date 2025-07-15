@@ -61,3 +61,29 @@ frontend/*.ntvs*
 frontend/*.njsproj
 frontend/*.sln
 frontend/*.sw?
+
+
+# Logs
+webService/logs
+webService/*.log
+webService/npm-debug.log*
+webService/yarn-debug.log*
+webService/yarn-error.log*
+webService/pnpm-debug.log*
+webService/lerna-debug.log*
+
+
+webService/dist
+webService/dist-ssr
+webService/*.local
+
+# Editor directories and files
+webService/.vscode/*
+webService/!.vscode/extensions.json
+webService/.idea
+webService/.DS_Store
+webService/*.suo
+webService/*.ntvs*
+webService/*.njsproj
+webService/*.sln
+webService/*.sw?
