@@ -23,6 +23,10 @@
 
 ---
 
+## Built With
+
+[![React][React.js]][React-url] [![Tailwindcss][Tailwindcss-logo]][Tailwindcss-url] [![Python][Python-logo]][Python-url] [![FastAPI][FastAPI-logo]][FastAPI-url] [![PostgreSQL][PostgreSQL-logo]][PostgreSQL-url] [![Redis][Redis-logo]][Redis-url] [![RabbitMQ][RabbitMQ-logo]][RabbitMQ-url] [![Docker][Docker-logo]][Docker-url] [![Nginx][Nginx-logo]][Nginx-url]
+
 ## Features
 
 - **Video Streaming** — Stream videos and movies directly from your own server with a dedicated player.
@@ -49,3 +53,22 @@
 [issues-url]: https://github.com/Noel6161131110/mycloudy/issues
 [license-shield]: https://img.shields.io/github/license/Noel6161131110/mycloudy.svg?style=for-the-badge
 [license-url]: https://github.com/Noel6161131110/mycloudy/blob/master/LICENSE.txt
+
+[FastAPI-logo]: https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi
+[FastAPI-url]: https://fastapi.tiangolo.com/
+[React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
+[React-url]: https://reactjs.org/
+[PostgreSQL-logo]: https://img.shields.io/badge/postgresql-4169e1?style=for-the-badge&logo=postgresql&logoColor=white
+[PostgreSQL-url]: https://www.postgresql.org/
+[Redis-logo]: https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white
+[Redis-url]: https://redis.io/
+[RabbitMQ-logo]: https://img.shields.io/badge/-rabbitmq-%23FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white
+[RabbitMQ-url]: https://www.rabbitmq.com/
+[Docker-logo]: https://img.shields.io/badge/docker-257bd6?style=for-the-badge&logo=docker&logoColor=white
+[Docker-url]: https://www.docker.com/
+[Nginx-logo]: https://img.shields.io/badge/Nginx-009639?logo=nginx&logoColor=white&style=for-the-badge
+[Nginx-url]: https://nginx.org/
+[Tailwindcss-logo]: https://img.shields.io/badge/Tailwind_CSS-grey?style=for-the-badge&logo=tailwind-css&logoColor=38B2AC
+[Tailwindcss-url]: https://tailwindcss.com/
+[Python-logo]: https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54
+[Python-url]: https://www.python.org/
