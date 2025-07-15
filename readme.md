@@ -1,3 +1,6 @@
+<a id="readme-top"></a>
+
+
 <p align="center">
   <a href="https://github.com/Noel6161131110/mycloudy/graphs/contributors"><img src="https://img.shields.io/github/contributors/Noel6161131110/mycloudy.svg?style=for-the-badge" alt="Contributors"></a>
   <a href="https://github.com/Noel6161131110/mycloudy/network/members"><img src="https://img.shields.io/github/forks/Noel6161131110/mycloudy.svg?style=for-the-badge" alt="Forks"></a>
@@ -25,7 +28,10 @@
 
 ## Built With
 
-[![React][React.js]][React-url] [![Tailwindcss][Tailwindcss-logo]][Tailwindcss-url] [![Python][Python-logo]][Python-url] [![FastAPI][FastAPI-logo]][FastAPI-url] [![PostgreSQL][PostgreSQL-logo]][PostgreSQL-url] [![Redis][Redis-logo]][Redis-url] [![RabbitMQ][RabbitMQ-logo]][RabbitMQ-url] [![Docker][Docker-logo]][Docker-url] [![Nginx][Nginx-logo]][Nginx-url]
+[![React][React.js]][React-url] [![Tailwindcss][Tailwindcss-logo]][Tailwindcss-url] [![Typescript][Typescript-logo]][Typescript-url] [![Python][Python-logo]][Python-url] [![FastAPI][FastAPI-logo]][FastAPI-url] [![PostgreSQL][PostgreSQL-logo]][PostgreSQL-url] [![Redis][Redis-logo]][Redis-url] [![RabbitMQ][RabbitMQ-logo]][RabbitMQ-url] [![Docker][Docker-logo]][Docker-url] [![Nginx][Nginx-logo]][Nginx-url]
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 
 ## Features
 
@@ -37,6 +43,10 @@
 - **Storage Assignment** — Assign and manage storage limits per user.
 - **Watch Together** — Watch movies with friends in sync, directly from your server.
 - **Folder Organization** — Organize your media into folders for easier browsing.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
 ---
 
 <!-- CONTRIBUTING -->
@@ -52,6 +62,20 @@ Don't forget to give the project a star! Thanks again!
 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+---
+
+<!-- LICENSE -->
+## License
+
+Distributed under the Unlicense License. See `LICENSE.txt` for more information.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
 
 ---
 
@@ -70,6 +94,8 @@ Don't forget to give the project a star! Thanks again!
 [license-shield]: https://img.shields.io/github/license/Noel6161131110/mycloudy.svg?style=for-the-badge
 [license-url]: https://github.com/Noel6161131110/mycloudy/blob/master/LICENSE.txt
 
+[Typescript-logo]: https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white
+[Typescript-url]: https://www.typescriptlang.org/
 [FastAPI-logo]: https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi
 [FastAPI-url]: https://fastapi.tiangolo.com/
 [React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
