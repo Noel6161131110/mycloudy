@@ -1,7 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Depends, Request
 from sqlmodel import Session, select
 from src.database.db import getSession
-from src.config.variables import FINAL_DIR
+from src.config.variables import VAULT_DIR
 import aiofiles
 import os
 import hashlib
@@ -10,12 +10,13 @@ from typing import Optional
 import shutil
 from pathlib import Path
 import logging
-from ..models.models import FileModel, FileShares
-from src.app.v1.Activity.models.models import Activity
+from ..models.models import FileModel, FileShares, PermissionType
+from src.app.v1.Activity.models.models import Activity, ActionType, ActivityType
 from src.app.v1.Folders.models.models import Folders
 import ffmpeg
 from datetime import datetime
-from src.services.grpc_client import validateAccessToken
+from sqlmodel.ext.asyncio.session import AsyncSession
+from src.dependencies.auth import getCurrentUserId
 
 async def get_video_duration(file_path: str) -> float:
     probe = ffmpeg.probe(file_path)
@@ -27,15 +28,14 @@ logger = logging.getLogger(__name__)
 
 
 # Configuration
-UPLOAD_DIR = Path(FINAL_DIR)
-TEMP_DIR = Path("temp_chunks")
+UPLOAD_DIR = Path(VAULT_DIR)
+TEMP_DIR = Path(VAULT_DIR + "/temp_chunks")
 MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024  # 5GB
 CHUNK_SIZE = 1024 * 1024  # 1MB chunks
 
 ALLOWED_EXTENSIONS = {"mp4", "mov", "avi", "mkv", "webm", "mp3", "wav", "ogg", "flac", "jpg", "jpeg", "png"}
 
-# Create directories if they don't exist
-UPLOAD_DIR.mkdir(exist_ok=True)
+
 TEMP_DIR.mkdir(exist_ok=True)
 
 class ChunkedUploadManager:
@@ -85,7 +85,7 @@ class ChunkedUploadManager:
             logger.error(f"Failed to save chunk {chunk_number} for file {file_id}: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Failed to save chunk: {str(e)}")
     
-    async def finalize_upload(self, file_id: str, db: Session):
+    async def finalize_upload(self, file_id: str, db: AsyncSession):
         """Combine all chunks into final file"""
         try:
             if file_id not in self.active_uploads:
@@ -145,9 +145,10 @@ class ChunkedUploadManager:
                 folderId=metadata.get('folderId'),
                 tagId=metadata.get('tagId')
             )
+            
             db.add(new_file)
-            db.commit()
-            db.refresh(new_file)
+            await db.commit()
+            await db.refresh(new_file)
 
             # Create file share record
             file_share = FileShares(
@@ -155,13 +156,22 @@ class ChunkedUploadManager:
                 folderId=metadata.get('folderId'),
                 sharedWithUserId=metadata.get('userId'),
                 sharedByUserId=metadata.get('userId'),
-                permission="owner",
+                permission= PermissionType.OWNER,
                 sharedAt=datetime.now()
             )
             db.add(file_share)
-            db.commit()
+            await db.commit()
             
+            activity = Activity(
+                userId=metadata.get('userId'),
+                action=ActionType.CREATED,
+                entityType=ActivityType.FILE,
+                fileId=new_file.id,
+                newValue=final_title
+            )
             
+            db.add(activity)
+            await db.commit()
             
             # Clean up temporary chunks
             shutil.rmtree(upload_info['chunk_dir'])
@@ -192,34 +202,20 @@ async def start_upload(
     tagId: Optional[UUID] = Form(None),
     description: Optional[str] = Form(None),
     title: Optional[str] = Form(None),
-    db: Session = Depends(getSession)
+    db: AsyncSession = Depends(getSession),
+    userId: str = Depends(getCurrentUserId)
 ):
     """Start a new chunked upload session"""
     try:
-        # Validate access token
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            print("Missing or invalid Authorization header")
-            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
-
-        access_token = auth_header.split("Bearer ")[-1]
-        result = await validateAccessToken(access_token)
-
-        if result['status'] == 'valid':
-            userId = result['userId']
-        elif result['status'] == 'invalid':
-            print("Invalid access token")
-            raise HTTPException(status_code=401, detail="Invalid access token")
-        else:
-            print(f"Unexpected validation result: {result}")
-            raise HTTPException(status_code=500, detail="Error validating access token")
-
+        print(userId)
         # Validate folder
         if not folderId:
             print("folderId is required")
             raise HTTPException(status_code=400, detail="folderId is required")
 
-        folder = db.exec(select(Folders).where(Folders.id == folderId)).first()
+        result = await db.exec(select(Folders).where(Folders.id == folderId))
+        folder = result.first()
+        
         if not folder:
             print("Folder not found")
             raise HTTPException(status_code=404, detail="Folder not found")
@@ -283,7 +279,7 @@ async def upload_chunk(
 
 
 async def finalize_upload(
-    db: Session = Depends(getSession),
+    db: AsyncSession = Depends(getSession),
     file_id: str = Form(...)
     ):
     """Finalize the upload by combining all chunks"""
@@ -484,7 +480,7 @@ async def get_upload_page():
                     if (title) startFormData.append('title', title);
                     if (description) startFormData.append('description', description);
 
-                    const startResponse = await fetch('/api/v1/test-file-operations/upload/start', {
+                    const startResponse = await fetch('/api/v1/files/upload/start', {
                         method: 'POST',
                         body: startFormData,
                         headers: {
@@ -519,7 +515,7 @@ async def get_upload_page():
                         formData.append('chunk', chunk);
                         
                         try {
-                            const response = await fetch('/api/v1/test-file-operations/upload/chunk', {
+                            const response = await fetch('/api/v1/files/upload/chunk', {
                                 method: 'POST',
                                 body: formData,
                                 // Add timeout
@@ -575,7 +571,7 @@ async def get_upload_page():
                     const finalizeFormData = new FormData();
                     finalizeFormData.append('file_id', file_id);
                     
-                    const finalizeResponse = await fetch('/api/v1/test-file-operations/upload/finalize', {
+                    const finalizeResponse = await fetch('/api/v1/files/upload/finalize', {
                         method: 'POST',
                         body: finalizeFormData
                     });

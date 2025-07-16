@@ -10,10 +10,12 @@ from uuid import uuid4
 from sqlmodel import Session, select
 from src.app.v1.Folders.models.models import Folders, Tags
 from src.database.db import getSession
+from platformdirs import user_data_dir
+from src.config.variables import VAULT_DIR, STORAGE_DIR
 
 load_dotenv()
 
-VAULT_DIR = "MYCLOUDY_VAULT"
+
 
 sys.dont_write_bytecode = True
 
@@ -23,16 +25,19 @@ IS_PRODUCTION = os.getenv("ENV_MODE") == "PRODUCTION"
 async def initializeVaultAndDefaults():
     if not os.path.exists(VAULT_DIR):
         os.makedirs(VAULT_DIR, exist_ok=True)
-        # os.chmod(VAULT_DIR, 0o700)  # Uncomment if you want strict FS permissions
+        
+        if os.name != 'nt':  # Not Windows
+            os.chmod(VAULT_DIR, 0o700)
 
     async with getSession() as session:
         # Ensure root folder record exists
-        result = await session.exec(select(Folders).where(Folders.name == VAULT_DIR))
+        result = await session.exec(select(Folders).where(Folders.name == STORAGE_DIR, Folders.isSystem == True))
         existing_folder = result.first()
         if not existing_folder:
             root_folder = Folders(
                 id=uuid4(),
-                name=VAULT_DIR,
+                name=STORAGE_DIR,
+                folderPath=VAULT_DIR,
                 createdBy=None,
                 parentId=None,
                 createdAt=datetime.now(),

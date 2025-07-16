@@ -2,14 +2,14 @@ from fastapi import File, HTTPException, Depends, Request, Form
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 from fastapi.encoders import jsonable_encoder
-from src.app.v1.Folders.models.models import Folders, Tags
+from src.app.v1.Folders.models.models import Folders, Tags, FolderShares, PermissionType
+from src.app.v1.FileOperations.models.models import FileModel, FileShares
 from ..schemas import *
 from src.database.db import getSession
 from typing import List
 from uuid import uuid4, UUID
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.security import security
-from src.config.variables import FINAL_DIR
 import os, ffmpeg, random, string
 from src.dependencies.auth import getCurrentUserId
 from datetime import datetime
@@ -112,6 +112,18 @@ class FolderController:
 
             db.add(activity)
             await db.commit()
+            
+            fileShare = FolderShares(
+                id=uuid4(),
+                folderId=newFolder.id,
+                sharedWithUserId=userId,
+                sharedByUserId=userId,
+                permission=PermissionType.OWNER,
+                sharedAt=datetime.now()
+            )
+            
+            db.add(fileShare)
+            await db.commit()
 
             return newFolder
         except Exception as e:
@@ -172,6 +184,7 @@ class FolderController:
         except Exception as e:
             print(f"Error in updateFolder: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
+        
 
 
 class TagController:

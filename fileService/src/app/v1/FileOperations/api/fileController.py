@@ -9,9 +9,8 @@ from typing import List
 from src.services.grpc_client import validateAccessToken
 from uuid import uuid4, UUID
 from sqlmodel.ext.asyncio.session import AsyncSession
-from fastapi.security import HTTPAuthorizationCredentials
+from src.dependencies.auth import getCurrentUserId
 from src.security import security
-from src.config.variables import FINAL_DIR
 import os, datetime, ffmpeg, random, string
 
 def generate_upload_id():
@@ -45,19 +44,9 @@ async def get_video_duration(file_path: str) -> float:
 
 async def getFiles(
     file_type: Optional[str] = None,
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    userId: UUID = Depends(getCurrentUserId),
     db: AsyncSession = Depends(getSession)
     ):
-
-    access_token = credentials.credentials
-    
-
-    result = await validateAccessToken(access_token)
-
-    if result['status'] != 'valid':
-        raise HTTPException(status_code=401, detail="Invalid access token")
-
-    userId = result['userId']
 
     # Step 2: Get FileShares shared with the user
     file_share_query = await db.exec(

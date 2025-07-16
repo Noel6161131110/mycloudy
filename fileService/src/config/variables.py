@@ -1,6 +1,16 @@
 import os
+from platformdirs import user_data_dir
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
-FINAL_DIR = os.getenv("FINAL_DIR", "MYCLOUDY_VAULT")
+STORAGE_DIR = os.getenv("STORAGE_DIR", "MYCLOUDY_VAULT")
+
+APP_NAME = os.getenv("APP_NAME", "mycloudy")
+APP_AUTHOR = os.getenv("APP_AUTHOR", "MyCloudyOrg")
+
+VAULT_DIR = os.path.join(user_data_dir(APP_NAME, APP_AUTHOR), STORAGE_DIR)
 
 correlationMap = {}

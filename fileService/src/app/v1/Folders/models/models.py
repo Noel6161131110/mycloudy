@@ -1,9 +1,14 @@
 from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
-from sqlmodel import SQLModel, Field, Column
+from sqlmodel import SQLModel, Field, Column, Text
 from sqlalchemy import ForeignKey, DateTime, String
+from enum import Enum
 
+class PermissionType(str, Enum):
+    VIEWER = "VIEWER"
+    OWNER = "OWNER"
+    EDITOR = "EDITOR"
 
 class Folders(SQLModel, table=True):
     __tablename__ = "Folders"
@@ -12,6 +17,10 @@ class Folders(SQLModel, table=True):
 
     name: str = Field(max_length=100, nullable=False)
     description: Optional[str] = Field(max_length=200, default=None, nullable=True)
+    
+    folderPath: Optional[str] = Field(
+        default=None, sa_column=Column("folderPath", Text, nullable=True)
+    )
     
     parentId: Optional[UUID] = Field(
         default=None,
@@ -75,14 +84,14 @@ class FolderShares(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
     folderId: UUID = Field(
-        sa_column=Column("folderId", ForeignKey("Folders.id"), nullable=False)
+        sa_column=Column("folderId", ForeignKey("Folders.id", ondelete="CASCADE"), nullable=False)
     )
     
     sharedWithUserId: UUID
     
     sharedByUserId: UUID
     
-    permission: str = Field(
+    permission: PermissionType = Field(
         sa_column=Column("permission", String(length=20), nullable=False)
     )
     

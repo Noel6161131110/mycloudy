@@ -3,6 +3,12 @@ from typing import Optional
 from uuid import UUID, uuid4
 from sqlmodel import SQLModel, Field, Column
 from sqlalchemy import Text, BigInteger, ForeignKey, DateTime, Float, String
+from enum import Enum
+
+class PermissionType(str, Enum):
+    VIEWER = "VIEWER"
+    OWNER = "OWNER"
+    EDITOR = "EDITOR"
 
 class FileModel(SQLModel, table=True):
     __tablename__ = "Files"
@@ -49,7 +55,7 @@ class VideoStreamInfo(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
     fileId: UUID = Field(
-        sa_column=Column("fileId", ForeignKey("Files.id"), nullable=False)
+        sa_column=Column("fileId", ForeignKey("Files.id", ondelete="CASCADE"), nullable=False)
     )
     
     userId: UUID
@@ -64,18 +70,18 @@ class FileShares(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
     fileId: UUID = Field(
-        sa_column=Column("fileId", ForeignKey("Files.id"), nullable=False)
+        sa_column=Column("fileId", ForeignKey("Files.id", ondelete="CASCADE"), nullable=False)
     )
     
     folderId: UUID = Field(
-        sa_column=Column("folderId", ForeignKey("Folders.id"), nullable=False)
+        sa_column=Column("folderId", ForeignKey("Folders.id", ondelete="CASCADE"), nullable=False)
     )
     
     sharedWithUserId: UUID
     
     sharedByUserId: UUID
     
-    permission: str = Field(
+    permission: PermissionType = Field(
         sa_column=Column("permission", String(length=20), nullable=False)
     )
     
