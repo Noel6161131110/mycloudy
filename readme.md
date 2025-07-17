@@ -28,7 +28,7 @@
 
 ## Built With
 
-[![React][React.js]][React-url] [![Tailwindcss][Tailwindcss-logo]][Tailwindcss-url] [![Typescript][Typescript-logo]][Typescript-url] [![Python][Python-logo]][Python-url] [![FastAPI][FastAPI-logo]][FastAPI-url] [![PostgreSQL][PostgreSQL-logo]][PostgreSQL-url] [![Redis][Redis-logo]][Redis-url] [![RabbitMQ][RabbitMQ-logo]][RabbitMQ-url] [![Docker][Docker-logo]][Docker-url] [![Nginx][Nginx-logo]][Nginx-url]
+[![React][React.js]][React-url] [![Tailwindcss][Tailwindcss-logo]][Tailwindcss-url] [![Shadcn][shadcn-logo]][shadcn-url] [![Typescript][Typescript-logo]][Typescript-url] [![Python][Python-logo]][Python-url] [![FastAPI][FastAPI-logo]][FastAPI-url] [![PostgreSQL][PostgreSQL-logo]][PostgreSQL-url] [![Redis][Redis-logo]][Redis-url] [![RabbitMQ][RabbitMQ-logo]][RabbitMQ-url] [![Docker][Docker-logo]][Docker-url] [![Nginx][Nginx-logo]][Nginx-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -114,3 +114,5 @@ Distributed under the Unlicense License. See `LICENSE.txt` for more information.
 [Tailwindcss-url]: https://tailwindcss.com/
 [Python-logo]: https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54
 [Python-url]: https://www.python.org/
+[shadcn-logo]: https://img.shields.io/badge/shadcn%2Fui-000?logo=shadcnui&logoColor=fff&style=for-the-badge
+[shadcn-url]: https://ui.shadcn.com/
