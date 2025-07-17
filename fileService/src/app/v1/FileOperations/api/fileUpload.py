@@ -1,7 +1,8 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Depends, Request
+from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 from src.database.db import getSession
-from src.config.variables import VAULT_DIR
+from src.config.variables import VAULT_DIR, STORAGE_DIR
 import aiofiles
 import os
 import hashlib
@@ -10,13 +11,14 @@ from typing import Optional
 import shutil
 from pathlib import Path
 import logging
-from ..models.models import FileModel, FileShares, PermissionType
+from ..models.models import FileModel, Shares, PermissionType
 from src.app.v1.Activity.models.models import Activity, ActionType, ActivityType
 from src.app.v1.Folders.models.models import Folders
 import ffmpeg
 from datetime import datetime
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.dependencies.auth import getCurrentUserId
+from src.app.v1.Folders.api.controller import updateParentFoldersUpdatedAt
 
 async def get_video_duration(file_path: str) -> float:
     probe = ffmpeg.probe(file_path)
@@ -151,9 +153,8 @@ class ChunkedUploadManager:
             await db.refresh(new_file)
 
             # Create file share record
-            file_share = FileShares(
+            file_share = Shares(
                 fileId=new_file.id,
-                folderId=metadata.get('folderId'),
                 sharedWithUserId=metadata.get('userId'),
                 sharedByUserId=metadata.get('userId'),
                 permission= PermissionType.OWNER,
@@ -164,14 +165,18 @@ class ChunkedUploadManager:
             
             activity = Activity(
                 userId=metadata.get('userId'),
-                action=ActionType.CREATED,
+                action=ActionType.UPLOADED,
                 entityType=ActivityType.FILE,
                 fileId=new_file.id,
-                newValue=final_title
+                name=final_title,
+                parentId=metadata.get('folderId'),
+                parentFolderName=metadata.get('folderName', 'VAULT'),
             )
             
             db.add(activity)
             await db.commit()
+            
+            await updateParentFoldersUpdatedAt(metadata.get('folderId'), db)
             
             # Clean up temporary chunks
             shutil.rmtree(upload_info['chunk_dir'])
@@ -207,31 +212,32 @@ async def start_upload(
 ):
     """Start a new chunked upload session"""
     try:
-        print(userId)
-        # Validate folder
-        if not folderId:
-            print("folderId is required")
-            raise HTTPException(status_code=400, detail="folderId is required")
-
-        result = await db.exec(select(Folders).where(Folders.id == folderId))
-        folder = result.first()
         
-        if not folder:
-            print("Folder not found")
-            raise HTTPException(status_code=404, detail="Folder not found")
-
-        if folder.isSystem:
-            if folder.createdBy is not None:
-                raise HTTPException(status_code=403, detail="Cannot upload to system folder owned by another user")
+        parentId = None
+        parentFolder = None
+        isVault = False
+        
+        if folderId:
+            parentId = folderId
+            parentFolder = await db.get(Folders, parentId)
+            
+            if not parentFolder:
+                raise HTTPException(status_code=404, detail="Parent folder not found")
+            
+            if parentFolder.isSystem and parentFolder.name == STORAGE_DIR:
+                isVault = True
         else:
-            if not folder.createdBy:
-                raise HTTPException(status_code=403, detail="Cannot upload to a folder without an owner")
-
+            return JSONResponse(
+                content={"message": "Parent folder is required"},
+                status_code=400
+            )
+        
         # Start upload session
         file_id = str(uuid4())
         upload_manager.start_upload(file_id, filename, total_size, {
             'userId': userId,
-            'folderId': folderId,
+            'folderId': None if isVault else folderId,
+            'folderName': parentFolder.name if parentFolder else 'VAULT',
             'tagId': tagId,
             'description': description,
             'title': title
@@ -405,10 +411,7 @@ async def get_upload_page():
                     return;
                 }
                 
-                if (!folderId) {
-                    showStatus('Folder ID is required', 'error');
-                    return;
-                }
+            
                 
                 Array.from(files).forEach(file => {
                     if (file.size > 5 * 1024 * 1024 * 1024) {

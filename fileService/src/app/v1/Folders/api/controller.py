@@ -2,19 +2,67 @@ from fastapi import File, HTTPException, Depends, Request, Form
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
 from fastapi.encoders import jsonable_encoder
-from src.app.v1.Folders.models.models import Folders, Tags, FolderShares, PermissionType
-from src.app.v1.FileOperations.models.models import FileModel, FileShares
+from src.app.v1.Folders.models.models import Folders, PermissionType
+from src.app.v1.FileOperations.models.models import FileModel, Shares
 from ..schemas import *
 from src.database.db import getSession
 from typing import List
 from uuid import uuid4, UUID
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.security import security
-import os, ffmpeg, random, string
+import os
 from src.dependencies.auth import getCurrentUserId
 from datetime import datetime
-from src.app.v1.Activity.models.models import Activity, ActivityType, ActionType
+from src.app.v1.Activity.models.models import Activity, ActivityType, ActionType, Tags
+from src.app.v1.Activity.models.tagModels import FolderTagLink
+from sqlalchemy import delete
+from sqlalchemy.orm import selectinload
+from src.config.variables import STORAGE_DIR
 
+async def deleteFolderDFSStrategy(
+    folderId: UUID,
+    db: AsyncSession,
+    userId: UUID
+    ):
+
+    subfolders_result = await db.exec(select(Folders).where(Folders.parentId == folderId))
+    subfolders = subfolders_result.all()
+
+    for subfolder in subfolders:
+        await deleteFolderDFSStrategy(subfolder.id, db, userId)
+
+  
+    filesResult = await db.exec(select(FileModel).where(FileModel.folderId == folderId))
+    files = filesResult.all()
+
+    for file in files:
+
+        try:
+            if file.filePath and os.path.exists(file.filePath):
+                os.remove(file.filePath)
+        except Exception as e:
+            print(f"Warning: Could not delete file {file.filePath}: {e}")
+
+        # Delete related file activities
+        await db.exec(delete(Activity).where(Activity.fileId == file.id))
+
+    await db.exec(delete(Activity).where(Activity.folderId == folderId))
+
+    # Finally delete the folder
+    folder_obj = await db.get(Folders, folderId)
+    if folder_obj:
+        await db.delete(folder_obj)
+
+async def updateParentFoldersUpdatedAt(folder_id: UUID, db: AsyncSession):
+    while folder_id:
+        folder = await db.get(Folders, folder_id)
+        if not folder:
+            break
+        folder.updatedAt = datetime.now()
+        db.add(folder)
+        await db.commit()
+        await db.refresh(folder)
+        folder_id = folder.parentId
 class FolderController:
     
     def __init__(self):
@@ -26,12 +74,14 @@ class FolderController:
         userId: str = Depends(getCurrentUserId),
     ):
         try:
-            folders = await db.exec(select(Folders).where(Folders.createdBy == userId))
-            result = folders.all()
+            result = await db.exec(
+                select(Folders)
+                .where(Folders.createdBy == userId, Folders.softDeleted == False)
+                .options(selectinload(Folders.tags))  # Load tags
+            )
+            folders = result.all()
 
-            folder_schemas: List[FolderGetSchema] = [
-                FolderGetSchema.model_validate(folder) for folder in result
-            ]
+            folder_schemas = [FolderGetSchema.model_validate(folder) for folder in folders]
 
             return JSONResponse(
                 content={"result": jsonable_encoder(folder_schemas)},
@@ -49,7 +99,12 @@ class FolderController:
     ):
         try:
 
-            result = await db.exec(select(Folders).where(Folders.id == folderId, Folders.createdBy == userId))
+            result = await db.exec(
+                select(Folders)
+                .where(Folders.createdBy == userId, Folders.id == folderId, Folders.softDeleted == False)
+                .options(selectinload(Folders.tags))
+            )
+            
             folder = result.first()
             
             if not folder:
@@ -76,15 +131,26 @@ class FolderController:
         db: AsyncSession = Depends(getSession)
     ):
         try:
-            if not folder.parentId:
-                result = await db.exec(select(Folders).where(Folders.name == "MYCLOUDY_VAULT", Folders.isSystem == True))
-                vaultFolder = result.first()
-                if not vaultFolder:
-                    raise HTTPException(status_code=404, detail="Vault folder not found")
-                folder.parentId = vaultFolder.id
+            parentId = None
+            parentFolder = None
+            isVault = False
+            
+            if folder.parentId:
+                parentId = folder.parentId
+                parentFolder = await db.get(Folders, parentId)
+                
+                if not parentFolder:
+                    raise HTTPException(status_code=404, detail="Parent folder not found")
+                
+                if parentFolder.isSystem and parentFolder.name == STORAGE_DIR:
+                    isVault = True
+            else:
+                return JSONResponse(
+                    content={"message": "Parent folder is required"},
+                    status_code=400
+                )
 
-            if not folder.tagId:
-                folder.tagId = None
+            folder.tagIds = folder.tagIds or []
 
             newFolder = Folders(
                 id=uuid4(),
@@ -99,21 +165,24 @@ class FolderController:
             )
 
             db.add(newFolder)
-            await db.commit()
-            await db.refresh(newFolder)
+
+            if folder.tagIds:
+                for tagId in folder.tagIds:
+                    db.add(FolderTagLink(folderId=newFolder.id, tagId=tagId))
 
             activity = Activity(
                 userId=userId,
                 action=ActionType.CREATED,
                 entityType=ActivityType.FOLDER,
                 folderId=newFolder.id,
-                newValue=newFolder.name
+                name=newFolder.name,
+                parentId=None if isVault else folder.parentId,
+                parentFolderName=folder.name if folder.parentId else 'VAULT',
             )
 
             db.add(activity)
-            await db.commit()
-            
-            fileShare = FolderShares(
+
+            fileShare = Shares(
                 id=uuid4(),
                 folderId=newFolder.id,
                 sharedWithUserId=userId,
@@ -123,7 +192,11 @@ class FolderController:
             )
             
             db.add(fileShare)
+            
             await db.commit()
+            await db.refresh(newFolder)
+            
+            await updateParentFoldersUpdatedAt(newFolder.parentId, db)
 
             return newFolder
         except Exception as e:
@@ -139,10 +212,17 @@ class FolderController:
         db: AsyncSession = Depends(getSession)
     ):
         try:
+            isVault = False
+            
             folder = await db.get(Folders, folderId)
 
             if not folder or folder.createdBy != userId:
                 raise HTTPException(status_code=404, detail="Folder not found")
+            
+            parent = await db.get(Folders, folder.parentId)
+
+            if parent and parent.isSystem and parent.name == STORAGE_DIR:
+                isVault = True
 
             # Compare and update name
             if folderUpdate.name and folderUpdate.name != folder.name:
@@ -153,7 +233,9 @@ class FolderController:
                     folderId=folderId,
                     fieldChanged="name",
                     oldValue=folder.name,
-                    newValue=folderUpdate.name
+                    newValue=folderUpdate.name,
+                    parentId=None if isVault else folder.parentId,
+                    parentFolderName= parent.name if parent else 'VAULT'
                 ))
                 folder.name = folderUpdate.name
 
@@ -172,9 +254,21 @@ class FolderController:
 
             folder.updatedAt = datetime.now()
             folder.colorHex = folderUpdate.colorHex or '#808080'
-            
+        
+
+            if folderUpdate.tagIds:
+                
+                await db.exec(delete(FolderTagLink).where(FolderTagLink.folderId == folderId))
+                
+                # Add new tags
+                for tag in folderUpdate.tagIds:
+                    tag_link = FolderTagLink(folderId=folder.id, tagId=tag)
+                    db.add(tag_link)
+                    
             await db.commit()
             await db.refresh(folder)
+            
+            await updateParentFoldersUpdatedAt(folder.parentId, db)
 
             return folder
 
@@ -183,6 +277,34 @@ class FolderController:
 
         except Exception as e:
             print(f"Error in updateFolder: {e}")
+            raise HTTPException(status_code=500, detail="Internal Server Error")
+        
+    async def deleteFolder(
+        self,
+        folderId: UUID,
+        userId: UUID = Depends(getCurrentUserId),
+        db: AsyncSession = Depends(getSession)
+    ):
+        try:
+            folder = await db.get(Folders, folderId)
+
+            if not folder or folder.createdBy != userId:
+                raise HTTPException(status_code=404, detail="Folder not found")
+
+            await deleteFolderDFSStrategy(folderId, db, userId)
+
+            await db.commit()
+
+            return JSONResponse(
+                content={"message": "Folder and all its contents deleted successfully"},
+                status_code=200
+            )
+
+        except HTTPException as httpExc:
+            raise httpExc
+
+        except Exception as e:
+            print(f"Error in deleteFolder: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
         
 

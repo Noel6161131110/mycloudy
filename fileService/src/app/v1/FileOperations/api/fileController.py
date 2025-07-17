@@ -1,7 +1,7 @@
 from fastapi import File, HTTPException, Depends, Request, Form
 from fastapi.responses import StreamingResponse, JSONResponse
 from sqlmodel import Session, select
-from ..models.models import FileModel, FileShares
+from ..models.models import FileModel, Shares
 from src.app.v1.Folders.models.models import Folders
 from ..schemas import *
 from src.database.db import getSession
@@ -50,9 +50,9 @@ async def getFiles(
 
     # Step 2: Get FileShares shared with the user
     file_share_query = await db.exec(
-        select(FileShares).where(FileShares.sharedWithUserId == userId)
+        select(Shares).where(Shares.sharedWithUserId == userId)
     )
-    file_shares: List[FileShares] = file_share_query.all()
+    file_shares: List[Shares] = file_share_query.all()
 
     if not file_shares:
         return JSONResponse(content={"files": []}, status_code=200)
@@ -61,7 +61,7 @@ async def getFiles(
     file_ids = [share.fileId for share in file_shares]
 
     # Step 4: Build base query for Files
-    query = select(FileModel).where(FileModel.id.in_(file_ids))
+    query = select(FileModel).where(FileModel.id.in_(file_ids), FileModel.softDeleted == False)
 
     # Step 5: Filter by file_type if provided
     if file_type:

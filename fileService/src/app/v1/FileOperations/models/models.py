@@ -1,14 +1,18 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, TYPE_CHECKING
 from uuid import UUID, uuid4
-from sqlmodel import SQLModel, Field, Column
-from sqlalchemy import Text, BigInteger, ForeignKey, DateTime, Float, String
+from sqlmodel import SQLModel, Field, Column, Relationship
+from sqlalchemy import Text, BigInteger, ForeignKey, DateTime, Float, String, Boolean
 from enum import Enum
+from src.app.v1.Activity.models.tagModels import FileTagLink
 
+if TYPE_CHECKING:
+    from src.app.v1.Activity.models.models import Tags
 class PermissionType(str, Enum):
     VIEWER = "VIEWER"
     OWNER = "OWNER"
     EDITOR = "EDITOR"
+    
 
 class FileModel(SQLModel, table=True):
     __tablename__ = "Files"
@@ -35,18 +39,14 @@ class FileModel(SQLModel, table=True):
         )
     )
     
-    tagId: Optional[UUID] = Field(
-        sa_column=Column(
-            "tagId",
-            ForeignKey("Tags.id", ondelete="SET NULL"),
-            nullable=True
-        )
-    )
 
     totalVideoLength: Optional[float] = Field(
         sa_column=Column("totalVideoLength", Float, nullable=False, default=None)
     )
     
+    tags: List["Tags"] = Relationship(back_populates="files", link_model=FileTagLink)
+    
+    softDeleted: bool = Field(default=False, nullable=False)
     
     
 class VideoStreamInfo(SQLModel, table=True):
@@ -64,27 +64,25 @@ class VideoStreamInfo(SQLModel, table=True):
         sa_column=Column("currentTrackAt", Float, nullable=False, default=0.0)
     )
     
-class FileShares(SQLModel, table=True):
-    __tablename__ = "FileShares"
+class Shares(SQLModel, table=True):
+    __tablename__ = "Shares"
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
-    fileId: UUID = Field(
-        sa_column=Column("fileId", ForeignKey("Files.id", ondelete="CASCADE"), nullable=False)
+    fileId: Optional[UUID] = Field(
+        sa_column=Column("fileId", ForeignKey("Files.id", ondelete="CASCADE"), nullable=True)
     )
-    
-    folderId: UUID = Field(
-        sa_column=Column("folderId", ForeignKey("Folders.id", ondelete="CASCADE"), nullable=False)
+    folderId: Optional[UUID] = Field(
+        sa_column=Column("folderId", ForeignKey("Folders.id", ondelete="CASCADE"), nullable=True)
     )
-    
-    sharedWithUserId: UUID
-    
+
+    sharedWithUserId: Optional[UUID] = Field(default=None, nullable=True)  # For internal user sharing
     sharedByUserId: UUID
-    
-    permission: PermissionType = Field(
-        sa_column=Column("permission", String(length=20), nullable=False)
-    )
-    
-    sharedAt: datetime = Field(
-        sa_column=Column("sharedAt", DateTime, nullable=False, default=datetime.now())
-    )
+
+    permission: str = Field(sa_column=Column("permission", String(length=20), nullable=False))
+
+    sharedAt: datetime = Field(default_factory=datetime.now(), sa_column=Column(DateTime, nullable=False))
+
+    isPublic: bool = Field(default=False, sa_column=Column("isPublic", Boolean, nullable=False))
+    accessToken: Optional[str] = Field(default=None, nullable=True)
+    expiresAt: Optional[datetime] = Field(default=None, nullable=True) 

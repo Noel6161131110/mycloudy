@@ -31,6 +31,12 @@ folderRoutes = [
         "name": "Update Folder",
         "path": "/{folderId}",
         "endpoint": folderController.updateFolder
+    },
+    {
+        "method": "DELETE",
+        "name": "Delete Folder",
+        "path": "/perm/{folderId}",
+        "endpoint": folderController.deleteFolder
     }
 ]
 

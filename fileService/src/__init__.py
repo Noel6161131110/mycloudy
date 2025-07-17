@@ -8,7 +8,8 @@ from dotenv import load_dotenv
 from datetime import datetime
 from uuid import uuid4
 from sqlmodel import Session, select
-from src.app.v1.Folders.models.models import Folders, Tags
+from src.app.v1.Folders.models.models import Folders
+from src.app.v1.Activity.models.models import Tags
 from src.database.db import getSession
 from platformdirs import user_data_dir
 from src.config.variables import VAULT_DIR, STORAGE_DIR
@@ -23,6 +24,7 @@ IS_PRODUCTION = os.getenv("ENV_MODE") == "PRODUCTION"
 
 
 async def initializeVaultAndDefaults():
+    print(VAULT_DIR)
     if not os.path.exists(VAULT_DIR):
         os.makedirs(VAULT_DIR, exist_ok=True)
         
